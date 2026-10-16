@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     identities_json: str = '{}'
     demo_mode: bool = False
     fixture_data: bool = False
+    data_snapshot: str = Field(default='', max_length=40)
     llama_url: str = 'http://127.0.0.1:8081/v1'
     llama_model: str = 'local'
     model_version: str = 'unverified'

@@ -21,7 +21,10 @@ def register_routes(app: FastAPI, settings, identity, conversation, audit):
 
     @app.get('/api/config')
     async def config():
-        return {'data_mode': 'demo' if settings.demo_mode else 'fixture' if settings.fixture_data else ('postgres' if settings.database_url else 'unconfigured'), 'inference_mode': 'rules' if settings.demo_mode else 'local'}
+        result = {'data_mode': 'demo' if settings.demo_mode else 'fixture' if settings.fixture_data else ('postgres' if settings.database_url else 'unconfigured'), 'inference_mode': 'rules' if settings.demo_mode else 'local'}
+        if settings.data_snapshot and not settings.demo_mode and not settings.fixture_data:
+            result['data_snapshot'] = settings.data_snapshot
+        return result
 
     @app.get('/api/health')
     async def diagnostic(authorization: str | None = Header(default=None)):

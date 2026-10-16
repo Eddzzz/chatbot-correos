@@ -8,7 +8,7 @@ from app.contracts import AccessContext, StrictModel
 
 TEMPLATES = {
     'tracking': 'SELECT source, tracking_code, status, origin, destination, registered_at, updated_at FROM chatbot.v_tracking WHERE tracking_code = %(tracking_code)s AND %(access_scope)s = \'global_internal\' ORDER BY registered_at DESC LIMIT %(limit)s',
-    'offices': 'SELECT office_id, codigo_sucursal, municipality, department, phone FROM chatbot.v_offices WHERE (CAST(%(department)s AS TEXT) IS NULL OR department = %(department)s) AND %(access_scope)s = \'global_internal\' ORDER BY department, municipality, office_id LIMIT %(limit)s',
+    'offices': 'SELECT office_id, codigo_sucursal, municipality, department, phone FROM chatbot.v_offices WHERE (CAST(%(department)s AS TEXT) IS NULL OR lower(translate(department, \'ÁÉÍÓÚÜáéíóúü\', \'AEIOUUaeiouu\')) = lower(translate(CAST(%(department)s AS TEXT), \'ÁÉÍÓÚÜáéíóúü\', \'AEIOUUaeiouu\'))) AND %(access_scope)s = \'global_internal\' ORDER BY department, municipality, office_id LIMIT %(limit)s',
 }
 for dimension in ('source', 'status', 'destination'):
     TEMPLATES['summary_' + dimension] = f'SELECT {dimension}, COUNT(*) AS total FROM chatbot.v_tracking WHERE registered_at >= %(start_date)s AND registered_at < %(end_date)s AND %(access_scope)s = \'global_internal\' GROUP BY {dimension} ORDER BY total DESC LIMIT %(limit)s'

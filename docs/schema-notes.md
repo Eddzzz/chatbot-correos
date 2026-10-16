@@ -1,6 +1,6 @@
 # Esquema identificado
 
-Inspección mediante `pg_restore 18 --schema-only`, sin conexión a una base, sin ejecutar SQL y sin leer filas. El respaldo de formato custom contiene 122 tablas y 159 claves foráneas. `source-schema.sql` conserva solo definiciones CREATE TABLE y FK: no es una migración ejecutable completa (omite claves únicas, secuencias y demás objetos). No se restauró el respaldo.
+Inspección inicial mediante `pg_restore 18 --schema-only`, sin ejecutar SQL del archivo. El respaldo de formato custom contiene 122 tablas y 159 claves foráneas. `source-schema.sql` conserva solo definiciones CREATE TABLE y FK: no es una migración ejecutable completa (omite claves únicas, secuencias y demás objetos). Posteriormente se importaron columnas aprobadas de siete tablas a una proyección local, sin restaurar funciones ni columnas personales; ver [datos reales](institutional-data.md).
 
 ## Proyección inicial
 

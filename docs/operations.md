@@ -1,5 +1,7 @@
 # Operación y conexión institucional
 
+**Estado actual:** datos reales del respaldo ya importados y conectados. Consultar [datos institucionales locales](institutional-data.md) para procedencia, conteos, validaciones y arranque. Las instrucciones originales de fixture siguen aplicando a la base ficticia independiente.
+
 ## Separación de entornos
 
 El respaldo original y los PostgreSQL preexistentes no se modificaron. La base ficticia usa exclusivamente `127.0.0.1:55432/correos_sandbox_fixture`. Las credenciales generadas están en `.runtime`, fuera de Git. Los scripts de prueba nunca toman un DSN institucional para administrar bases o bloquear tablas.

@@ -39,6 +39,9 @@ jobs:
       - name: Test contracts, architecture and real PostgreSQL
         working-directory: backend
         run: uv run --frozen pytest -q
+      - name: Test backup projection and evaluation scripts
+        working-directory: backend
+        run: uv run --frozen python -m unittest discover -s ../scripts -p 'test_*.py'
   frontend:
     runs-on: ubuntu-latest
     defaults:

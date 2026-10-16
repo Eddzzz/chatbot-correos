@@ -1,5 +1,7 @@
 # Verificación del 16 de octubre de 2026
 
+**Actualización posterior:** la aplicación ya usa datos reales proyectados del respaldo. Este documento conserva la verificación inicial con fixtures; consultar [conexión y validación real](institutional-data.md) para el estado actual.
+
 ## Resultado observado
 
 Implementación funcional para uso interno, con esquema del respaldo real y datos **ficticios** de integración. No se aplicó la proyección a una base institucional ni se restauró el respaldo de 15,4 GB. No se declara aprobación de producción ni cumplimiento de exactitud de negocio.

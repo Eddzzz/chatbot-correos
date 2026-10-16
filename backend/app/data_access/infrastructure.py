@@ -44,6 +44,8 @@ class PostgresReader:
                             break
                         rows.append(row)
             source = ('DEMOSTRACIÓN · datos ficticios · ' if self.settings.fixture_data else '') + ('Directorio de sucursales' if query.template == 'offices' else 'Registros de seguimiento postal')
+            if self.settings.data_snapshot and not self.settings.fixture_data:
+                source += ' · respaldo local del ' + self.settings.data_snapshot
             return QueryResult(rows, source, datetime.now(timezone.utc), truncated)
         except ServiceError:
             raise
