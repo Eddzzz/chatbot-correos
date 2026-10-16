@@ -58,6 +58,32 @@ class Conversation:
         _, session = self.session(session_id, principal)
         return {'messages': session.messages}
 
+    async def office_related_tables(self, office_id, principal):
+        started = time.monotonic()
+        status = 'error'
+        try:
+            result = await self.tools.related_tables(office_id, principal)
+            status = 'answer'
+            return {'rows': result.rows, 'truncated': result.truncated, 'source': result.source, 'queried_at': result.queried_at}
+        except ServiceError as error:
+            status = 'forbidden' if error.status_code == 403 else 'error'
+            raise
+        finally:
+            self.audit.record(str(uuid4()), status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation='offices_related_details', model_version=self.settings.model_version)
+
+    async def office_related_records(self, office_id, table_name, offset, limit, principal):
+        started = time.monotonic()
+        status = 'error'
+        try:
+            result = await self.tools.related_records(office_id, table_name, offset, limit, principal)
+            status = 'answer'
+            return result
+        except ServiceError as error:
+            status = 'forbidden' if error.status_code == 403 else 'error'
+            raise
+        finally:
+            self.audit.record(str(uuid4()), status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation='offices_records_details', model_version=self.settings.model_version)
+
     async def handle(self, request: ChatRequest, principal: AccessContext, request_id: str, session_id: str):
         started = time.monotonic()
         status = 'error'

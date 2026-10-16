@@ -24,7 +24,11 @@ class PostgresReader:
             authorize_details(context)
         sql = TEMPLATES.get(query.template, '')
         validate_query(query, sql)
-        params = {**query.parameters, 'access_scope': 'global_internal', 'limit': self.settings.max_rows + 1}
+        # The metadata inventory is a separate bounded contract (at most 128 tables).
+        # Operational record limits do not hide tables from that inventory.
+        row_limit = 128 if query.template == 'offices_related_details' else self.settings.max_rows
+        byte_limit = 65536 if query.template == 'offices_related_details' else self.settings.max_result_bytes
+        params = {**query.parameters, 'access_scope': 'global_internal', 'limit': row_limit + 1}
         try:
             async with self.pool.connection() as conn:
                 async with conn.transaction():
@@ -41,7 +45,7 @@ class PostgresReader:
                     rows, size, truncated = [], 0, False
                     async for row in cursor:
                         size += len(json.dumps(row, default=str).encode())
-                        if len(rows) >= self.settings.max_rows or size > self.settings.max_result_bytes:
+                        if len(rows) >= row_limit or size > byte_limit:
                             truncated = True
                             break
                         rows.append(row)
@@ -66,6 +70,8 @@ class DemoReader:
         if query.template.endswith('_details'):
             authorize_details(context)
         validate_query(query, TEMPLATES.get(query.template, ''))
+        if query.template in {'offices_related_details', 'offices_table_details', 'offices_records_details'}:
+            return QueryResult([], 'DEMOSTRACIÓN · relaciones sin registros asociados', datetime.now(timezone.utc))
         rows = []
         if query.template.startswith('tracking') and query.parameters['tracking_code'] == 'DEMO123BO':
             rows = [{'source': 'demo', 'tracking_code': 'DEMO123BO', 'status': 'En tránsito (ficticio)', 'origin': 'La Paz', 'destination': 'Cochabamba', 'registered_at': '2026-01-15', 'updated_at': '2026-01-16'}]

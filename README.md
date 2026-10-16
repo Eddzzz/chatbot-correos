@@ -60,6 +60,8 @@ Ejemplos sobre **datos ficticios**:
 
 ## Datos institucionales
 
+Las fichas de sucursales incluyen un inventario de 65 tablas relacionadas directa e indirectamente, con conteos y registros paginados. Consultar [alcance y relaciones de sucursales](docs/office-relations.md).
+
 Consultar [diccionario y límites](docs/schema-notes.md), [operación](docs/operations.md) y [backend](backend/README.md). Aplicar, tras revisión de administración de datos, `database/views/001_projection.sql` y `database/policies/002_reader_role.sql` en una base aprobada. No alteran tablas operativas ni se ejecutan al iniciar la API.
 
 La conexión local actual se preparó mediante `scripts/import_backup.py` y `scripts/connect_institutional.py`. En otra instalación, usar el Python del entorno backend para ejecutar ambos scripts; requieren el cluster local preparado por `init_fixture.ps1`. `import_backup.py <ruta-respaldo>` crea un destino nuevo y rehúsa sobrescribirlo. `connect_institutional.py` valida datos/permisos y genera la configuración privada. No ejecutar otra importación sobre este destino ya preparado. Detalles en [operación](docs/operations.md).

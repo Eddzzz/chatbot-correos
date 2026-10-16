@@ -15,6 +15,9 @@ for dimension in ('source', 'status', 'destination'):
 
 TEMPLATES['tracking_details'] = TEMPLATES['tracking'].replace('source, tracking_code, status, origin, destination, registered_at, updated_at', 'source, tracking_code, details').replace('chatbot.v_tracking ', 'chatbot.v_tracking_details ').replace('registered_at DESC', 'source, tracking_code')
 TEMPLATES['offices_details'] = TEMPLATES['offices'].replace('office_id, codigo_sucursal, municipality, department, phone', 'office_id, department, details').replace('chatbot.v_offices ', 'chatbot.v_office_details ').replace('department, municipality, office_id', 'department, office_id')
+TEMPLATES['offices_related_details'] = "SELECT office_id, table_name, total_count, relation_kind, path_info, descendant_count, lookup_count FROM chatbot.v_office_related_counts WHERE office_id = %(office_id)s AND %(access_scope)s = 'global_internal' ORDER BY table_name LIMIT %(limit)s"
+TEMPLATES['offices_table_details'] = TEMPLATES['offices_related_details'].replace('WHERE office_id', 'WHERE table_name = %(table_name)s AND office_id')
+TEMPLATES['offices_records_details'] = "SELECT record_key, record, relation_kind FROM chatbot.v_office_related_records WHERE office_id = %(office_id)s AND table_name = %(table_name)s AND %(access_scope)s = 'global_internal' ORDER BY record_key LIMIT %(page_limit)s OFFSET %(offset)s"
 
 
 class QuerySpec(StrictModel):
@@ -43,7 +46,7 @@ def validate_query(query: QuerySpec, sql: str):
     if len(statements) != 1 or not isinstance(statements[0], exp.Select):
         raise ValueError('Solo SELECT.')
     for table in statements[0].find_all(exp.Table):
-        if table.db != 'chatbot' or table.name not in {'v_tracking', 'v_offices', 'v_tracking_details', 'v_office_details'}:
+        if table.db != 'chatbot' or table.name not in {'v_tracking', 'v_offices', 'v_tracking_details', 'v_office_details', 'v_office_related_counts', 'v_office_related_records'}:
             raise ValueError('Fuente no autorizada.')
     if any(isinstance(node, (exp.Insert, exp.Update, exp.Delete, exp.Command, exp.Subquery, exp.Union)) for node in statements[0].walk()):
         raise ValueError('Estructura SQL no autorizada.')

@@ -27,3 +27,27 @@ class ToolRegistry:
         if intent.detail and intent.operation in {'tracking', 'offices'}:
             query = query.model_copy(update={'template': query.template + '_details'})
         return await self.reader.run_read(query, context)
+
+    async def related_tables(self, office_id: int, context: AccessContext):
+        authorize_operation(context, 'offices')
+        authorize_details(context)
+        return await self.reader.run_read(QuerySpec(template='offices_related_details', parameters={'office_id': office_id}), context)
+
+    async def related_records(self, office_id: int, table_name: str, offset: int, limit: int, context: AccessContext):
+        if office_id < 1 or offset < 0 or offset > 10000000 or not 1 <= limit <= 20:
+            raise ServiceError('invalid_page', 'La página solicitada no es válida.', 422)
+        authorize_operation(context, 'offices')
+        authorize_details(context)
+        tables = await self.reader.run_read(QuerySpec(template='offices_table_details', parameters={'office_id': office_id, 'table_name': table_name}), context)
+        table = next((row for row in tables.rows if row['table_name'] == table_name), None)
+        if table is None:
+            raise ServiceError('relation_not_found', 'La tabla no pertenece al catálogo de relaciones de esta sucursal.', 404)
+        result = await self.reader.run_read(QuerySpec(template='offices_records_details', parameters={
+            'office_id': office_id, 'table_name': table_name, 'offset': offset, 'page_limit': limit + 1}), context)
+        has_more = result.truncated or len(result.rows) > limit
+        rows = result.rows[:limit]
+        if not rows and result.truncated:
+            raise ServiceError('record_too_large', 'Un registro supera el límite de respuesta y no puede mostrarse completo.', 422)
+        return {'rows': rows, 'total_count': table['total_count'], 'offset': offset,
+                'next_offset': offset + len(rows) if has_more else None,
+                'source': result.source, 'queried_at': result.queried_at, 'truncated': has_more}

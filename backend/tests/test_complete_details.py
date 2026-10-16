@@ -22,6 +22,8 @@ def test_complete_followup_keeps_the_previously_confirmed_office_and_uses_detail
         async def run_read(self, query, context):
             from app.data_access.public import QueryResult
             from datetime import datetime, timezone
+            if query.template == 'offices_related_details':
+                return QueryResult([], 'Datos ficticios', datetime.now(timezone.utc))
             assert query.parameters['department'] == 'La Paz'
             rows = [{'office_id': 1, 'department': 'LA PAZ', 'details': {'puntoVenta': 7, 'usuarios_asignados': [{'name': 'Persona ficticia'}]}}] if query.template == 'offices_details' else [{'office_id': 1, 'department': 'LA PAZ'}]
             return QueryResult(rows, 'Datos ficticios', datetime.now(timezone.utc))

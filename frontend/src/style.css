@@ -12,3 +12,15 @@
 .detail-records>div+div{margin-top:10px}
 .detail-empty{color:#6c7d88;font-style:italic}
 @media(max-width:600px){.full-details{padding:12px}.detail-fields>div{display:block}.detail-fields dd{margin-top:5px}.detail-fields dt{font-size:11px}}
+
+.office-relations{margin-top:24px;border-top:2px solid #dce4e9;padding-top:20px;min-width:0}
+.office-relations p{font-size:13px;color:#526c7c}
+.office-relations label{display:flex;gap:8px;flex-direction:column;font-size:13px;font-weight:600;margin:14px 0}
+.office-relations input{padding:10px;border:1px solid #aabac6;border-radius:4px;max-width:420px;width:100%}
+.office-relations button{border:1px solid #aabac6;background:#fff;color:#193449;border-radius:4px;padding:7px 10px;white-space:nowrap}
+.office-relations td,.office-relations th{vertical-align:top}
+.office-relations td details{font-size:12px;max-width:360px;overflow-wrap:anywhere;white-space:normal}
+.related-page{margin-top:20px;padding:16px;border:1px solid #dce4e9;border-radius:6px}
+.related-page>details{margin:8px 0;padding:8px;border-bottom:1px solid #dce4e9}
+.related-page summary{cursor:pointer}
+.related-pagination{display:flex;justify-content:space-between;margin-top:16px;gap:12px}

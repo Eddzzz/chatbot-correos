@@ -1,0 +1,2916 @@
+{
+  "tables": {
+    "alerta_empresa_destinatarios": {
+      "columns": {
+        "alerta_empresa_id": "bigint",
+        "empresa_id": "bigint"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← alertas_empresa.aprobada_por ← alerta_empresa_destinatarios.alerta_empresa_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "alerta_empresa_lecturas": {
+      "columns": {
+        "alerta_empresa_id": "bigint",
+        "user_id": "bigint",
+        "leida_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← alerta_empresa_lecturas.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "alerta_empresa_usuarios": {
+      "columns": {
+        "alerta_empresa_id": "bigint",
+        "user_id": "bigint"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← alerta_empresa_usuarios.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "alertas_empresa": {
+      "columns": {
+        "id": "bigint",
+        "titulo": "text",
+        "mensaje": "text",
+        "creado_por": "bigint",
+        "publicada_at": "timestamp",
+        "vence_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "aprobada_at": "timestamp",
+        "aprobada_por": "bigint"
+      },
+      "presence": [
+        "portada_path",
+        "pdf_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← alertas_empresa.aprobada_por. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "auditoria": {
+      "columns": {
+        "id": "bigint",
+        "nombre_evento": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_auditoria.user_id → auditoria.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "bitacoras": {
+      "columns": {
+        "id": "bigint",
+        "paquetes_ems_id": "bigint",
+        "paquetes_contrato_id": "bigint",
+        "user_id": "bigint",
+        "cod_especial": "text",
+        "transportadora": "text",
+        "provincia": "text",
+        "factura": "text",
+        "precio_total": "numeric",
+        "peso": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "paquetes_ordi_id": "bigint",
+        "paquetes_certi_id": "bigint",
+        "factura_fecha_emision": "timestamp",
+        "factura_nit_emisor": "text",
+        "factura_cuf": "text",
+        "factura_razon_social": "text",
+        "factura_cliente": "text",
+        "factura_direccion": "text"
+      },
+      "presence": [
+        "imagen_factura",
+        "qr_url",
+        "qr_texto",
+        "qr_datos"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← bitacoras.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "cartero": {
+      "columns": {
+        "id": "bigint",
+        "id_paquetes_ems": "bigint",
+        "id_paquetes_certi": "bigint",
+        "id_estados": "bigint",
+        "id_user": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "intento": "integer",
+        "recibido_por": "text",
+        "descripcion": "text",
+        "id_paquetes_contrato": "bigint",
+        "id_paquetes_ordi": "bigint",
+        "id_solicitud_cliente": "bigint",
+        "id_estado_anterior": "bigint"
+      },
+      "presence": [
+        "foto",
+        "imagen",
+        "imagen_devolucion"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero.id_user. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "cartero_assignment_report_items": {
+      "columns": {
+        "id": "bigint",
+        "cartero_assignment_report_id": "bigint",
+        "tipo_paquete": "text",
+        "paquete_id": "bigint",
+        "codigo": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero_assignment_reports.actor_user_id ← cartero_assignment_report_items.cartero_assignment_report_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "cartero_assignment_reports": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "assigned_user_id": "bigint",
+        "actor_user_id": "bigint",
+        "regional": "text",
+        "assigned_at": "timestamp",
+        "total_assigned": "integer",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [
+        "summary_by_type",
+        "rows"
+      ],
+      "excluded": [
+        "token"
+      ],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero_assignment_reports.actor_user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "cartero_guias": {
+      "columns": {
+        "id": "bigint",
+        "guia": "text",
+        "transportadora": "text",
+        "provincia": "text",
+        "user_id": "bigint",
+        "factura": "text",
+        "codigo": "text",
+        "precio_total": "numeric",
+        "peso_total": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero_guias.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "cashier_flow_receivable_collections": {
+      "columns": {
+        "id": "bigint",
+        "scope_hash": "text",
+        "servicio": "text",
+        "anio": "smallint",
+        "limite": "smallint",
+        "departamento": "text",
+        "monto_cobrado": "numeric",
+        "cobrado_por": "bigint",
+        "cobrado_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "cobro_activo": "boolean",
+        "devuelto_at": "timestamp",
+        "devuelto_por": "bigint"
+      },
+      "presence": [
+        "meses"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cashier_flow_receivable_collections.cobrado_por. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "cashier_flow_receivable_movements": {
+      "columns": {
+        "id": "bigint",
+        "movement_key": "text",
+        "servicio": "text",
+        "anio": "smallint",
+        "mes": "smallint",
+        "venta_id": "text",
+        "detalle_id": "text",
+        "codigo_orden": "text",
+        "codigo_seguimiento": "text",
+        "fecha": "text",
+        "descripcion": "text",
+        "monto": "numeric",
+        "cobro_activo": "boolean",
+        "cobrado_por": "bigint",
+        "cobrado_at": "timestamp",
+        "devuelto_por": "bigint",
+        "devuelto_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "facturado_por_id": "text",
+        "facturado_por_nombre": "text",
+        "facturado_por_email": "text",
+        "facturado_por_alias": "text",
+        "cantidad_paquetes": "numeric"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cashier_flow_receivable_movements.cobrado_por. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "chasqui_location_points": {
+      "columns": {
+        "id": "bigint",
+        "user_id": "bigint",
+        "location_id": "text",
+        "latitude": "numeric",
+        "longitude": "numeric",
+        "accuracy_m": "numeric",
+        "speed_kmh": "numeric",
+        "heading": "numeric",
+        "battery_percent": "numeric",
+        "is_moving": "boolean",
+        "gps_enabled": "boolean",
+        "gps_mocked": "boolean",
+        "sent_at": "timestamp",
+        "received_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "is_simulated": "boolean",
+        "route_label": "text"
+      },
+      "presence": [],
+      "excluded": [
+        "device_id",
+        "device_name"
+      ],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← chasqui_location_points.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "clientes": {
+      "columns": {
+        "id": "integer",
+        "user_id": "bigint",
+        "provider": "text",
+        "google_id": "text",
+        "name": "text",
+        "email": "text",
+        "avatar": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "rol": "text",
+        "codigo_cliente": "text",
+        "tipodocumentoidentidad": "text",
+        "numero_carnet": "text",
+        "razon_social": "text",
+        "telefono": "text",
+        "direccion": "text",
+        "complemento": "text"
+      },
+      "presence": [],
+      "excluded": [
+        "email_verified_at",
+        "password",
+        "remember_token"
+      ],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_tiktoker.user_id → clientes.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "conciliaciones_empresa": {
+      "columns": {
+        "id": "bigint",
+        "empresa_id": "bigint",
+        "anio": "smallint",
+        "mes": "smallint",
+        "gestora_at": "timestamp",
+        "gestora_por": "bigint",
+        "conciliacion_at": "timestamp",
+        "conciliacion_por": "bigint",
+        "documento_nombre": "text",
+        "documento_mime": "text",
+        "documento_tamano": "bigint",
+        "documento_at": "timestamp",
+        "documento_por": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "factura_venta_id": "text",
+        "factura_detalle_id": "text",
+        "factura_descripcion": "text",
+        "factura_codigo_orden": "text",
+        "factura_codigo_seguimiento": "text",
+        "factura_fecha": "timestamp",
+        "factura_monto": "numeric",
+        "facturado_anio": "smallint",
+        "facturado_mes": "smallint",
+        "por_cobrar_at": "timestamp",
+        "por_cobrar_por": "bigint",
+        "factura_cuf": "text",
+        "factura_numero": "text",
+        "factura_razon_social": "text",
+        "factura_codigo_cliente": "text",
+        "factura_numero_documento": "text",
+        "factura_tipo_documento": "text",
+        "pago_recibido_at": "timestamp",
+        "pago_recibido_por": "bigint",
+        "pago_comprobante_nombre": "text",
+        "pago_comprobante_tamano": "bigint",
+        "confirmacion_pago_at": "timestamp",
+        "confirmacion_pago_por": "bigint",
+        "conciliado_at": "timestamp",
+        "conciliado_por": "bigint",
+        "formato_nota_cobranza": "text",
+        "nombre_empresa_cobranza": "text"
+      },
+      "presence": [
+        "documento_path",
+        "factura_pdf_path",
+        "pago_comprobante_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← conciliaciones_empresa.conciliacion_por. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "destino": {
+      "columns": {
+        "id": "bigint",
+        "nombre_destino": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← preregistros.validado_por → destino.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "driver_incentive_reports": {
+      "columns": {
+        "id": "bigint",
+        "driver_id": "bigint",
+        "report_year": "smallint",
+        "report_month": "smallint",
+        "stars_start": "smallint",
+        "stars_end": "smallint",
+        "non_preventive_requests": "integer",
+        "preventive_requests": "integer",
+        "generated_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "discountable_events": "integer"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← drivers.user_id ← driver_incentive_reports.driver_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "drivers": {
+      "columns": {
+        "id": "bigint",
+        "user_id": "bigint",
+        "nombre": "text",
+        "licencia": "text",
+        "tipo_licencia": "text",
+        "fecha_vencimiento_licencia": "date",
+        "telefono": "text",
+        "email": "text",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp"
+      },
+      "presence": [
+        "memorandum_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← drivers.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "empresa": {
+      "columns": {
+        "id": "bigint",
+        "nombre": "text",
+        "sigla": "text",
+        "codigo_cliente": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "clasificacion": "text",
+        "inicio_contrato": "date",
+        "fin_contrato": "date",
+        "cobertura": "text",
+        "presupuesto": "numeric",
+        "nit": "text"
+      },
+      "presence": [
+        "documentacion_legal",
+        "documento_pdf_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id → empresa.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "empresa_historiales": {
+      "columns": {
+        "id": "bigint",
+        "empresa_id": "bigint",
+        "archivado_por": "bigint",
+        "nombre": "text",
+        "sigla": "text",
+        "codigo_cliente": "text",
+        "clasificacion": "text",
+        "inicio_contrato": "date",
+        "fin_contrato": "date",
+        "cobertura": "text",
+        "presupuesto": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "nit": "text"
+      },
+      "presence": [
+        "documentacion_legal",
+        "documento_pdf_path",
+        "datos_completos"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← empresa_historiales.archivado_por. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "estados": {
+      "columns": {
+        "id": "bigint",
+        "nombre_estado": "text",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero.id_user → estados.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos": {
+      "columns": {
+        "id": "bigint",
+        "nombre_evento": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_certi.user_id → eventos.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_auditoria": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "auditoria_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_auditoria.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_certi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_certi.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_contrato": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_contrato.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_despacho": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_despacho.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_ems": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_ems.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_ordi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_ordi.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "eventos_tiktoker": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "cliente_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← eventos_tiktoker.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "fuel_antifraud_cases": {
+      "columns": {
+        "id": "bigint",
+        "case_key": "text",
+        "type": "text",
+        "status": "text",
+        "invoice_number": "text",
+        "fuel_invoice_id": "bigint",
+        "conflicting_fuel_invoice_id": "bigint",
+        "fuel_log_id": "bigint",
+        "conflicting_fuel_log_id": "bigint",
+        "vehicle_id": "bigint",
+        "driver_id": "bigint",
+        "conflicting_vehicle_id": "bigint",
+        "conflicting_driver_id": "bigint",
+        "detected_source": "text",
+        "summary": "text",
+        "reviewed_at": "timestamp",
+        "reviewed_by_user_id": "bigint",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [
+        "evidence_json"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← fuel_antifraud_cases.reviewed_by_user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "fuel_invoice_details": {
+      "columns": {
+        "id": "bigint",
+        "fuel_invoice_id": "bigint",
+        "fuel_log_id": "bigint",
+        "monto": "numeric",
+        "detalle": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "gas_station_id": "bigint",
+        "cantidad": "numeric",
+        "precio_unitario": "numeric",
+        "subtotal": "numeric",
+        "estado": "text",
+        "activo": "boolean"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← drivers.user_id ← vehicle_log.drivers_id → fuel_invoice_details.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "fuel_invoices": {
+      "columns": {
+        "id": "bigint",
+        "numero": "text",
+        "fecha_emision": "date",
+        "gas_station_id": "bigint",
+        "monto_total": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "numero_factura": "text",
+        "nombre_cliente": "text",
+        "fuel_latitude": "numeric",
+        "fuel_longitude": "numeric",
+        "fuel_location_label": "text",
+        "fuel_recorded_at": "timestamp",
+        "activo": "boolean"
+      },
+      "presence": [
+        "siat_source_url",
+        "siat_snapshot_json",
+        "siat_document_path",
+        "invoice_photo_path",
+        "siat_rollo_document_path",
+        "antifraud_payload_json"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← fuel_antifraud_cases.reviewed_by_user_id → fuel_invoices.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "fuel_logs": {
+      "columns": {
+        "id": "bigint",
+        "fecha": "timestamp",
+        "galones": "numeric",
+        "precio_galon": "numeric",
+        "total_calculado": "numeric",
+        "kilometraje": "numeric",
+        "observaciones": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp"
+      },
+      "presence": [
+        "recibo"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← drivers.user_id ← vehicle_log.drivers_id → fuel_invoice_details.id → fuel_logs.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "gas_stations": {
+      "columns": {
+        "id": "bigint",
+        "nombre": "text",
+        "ubicacion": "text",
+        "ciudad": "text",
+        "provincia": "text",
+        "telefono": "text",
+        "email": "text",
+        "latitud": "numeric",
+        "longitud": "numeric",
+        "activa": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp",
+        "nit_emisor": "text",
+        "razon_social": "text",
+        "direccion": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← fuel_antifraud_cases.reviewed_by_user_id → fuel_invoices.id → gas_stations.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "maintenance_alert_user_reads": {
+      "columns": {
+        "id": "bigint",
+        "maintenance_alert_id": "bigint",
+        "user_id": "bigint",
+        "read_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← maintenance_alert_user_reads.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "maintenance_alerts": {
+      "columns": {
+        "id": "bigint",
+        "vehicle_id": "bigint",
+        "maintenance_type_id": "bigint",
+        "maintenance_appointment_id": "bigint",
+        "tipo": "text",
+        "mensaje": "text",
+        "leida": "boolean",
+        "status": "text",
+        "fecha_resolucion": "timestamp",
+        "usuario_id": "bigint",
+        "kilometraje_actual": "numeric",
+        "kilometraje_objetivo": "numeric",
+        "faltante_km": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "postponed_until": "timestamp",
+        "postponed_once": "boolean"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← maintenance_alerts.usuario_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "maintenance_appointments": {
+      "columns": {
+        "id": "bigint",
+        "vehicle_id": "bigint",
+        "driver_id": "bigint",
+        "tipo_mantenimiento_id": "bigint",
+        "fecha_programada": "timestamp",
+        "es_accidente": "boolean",
+        "estado": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "approved_at": "timestamp",
+        "approved_by_user_id": "bigint",
+        "requested_by_user_id": "bigint",
+        "solicitud_fecha": "timestamp",
+        "origen_solicitud": "text",
+        "activo": "boolean"
+      },
+      "presence": [
+        "evidencia_path",
+        "formulario_documento_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← maintenance_appointments.approved_by_user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "maintenance_logs": {
+      "columns": {
+        "id": "bigint",
+        "vehicle_id": "bigint",
+        "tipo": "text",
+        "fecha": "date",
+        "proxima_fecha": "date",
+        "costo": "numeric",
+        "kilometraje": "numeric",
+        "taller": "text",
+        "descripcion": "text",
+        "observaciones": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp",
+        "maintenance_type_id": "bigint",
+        "proximo_kilometraje": "numeric",
+        "activo": "boolean"
+      },
+      "presence": [
+        "comprobante"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← workshops.approved_by_user_id → maintenance_logs.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "maintenance_types": {
+      "columns": {
+        "id": "bigint",
+        "vehicle_class_id": "bigint",
+        "nombre": "text",
+        "cada_km": "integer",
+        "intervalo_km": "integer",
+        "intervalo_km_init": "integer",
+        "intervalo_km_fh": "integer",
+        "km_alerta_previa": "integer",
+        "descripcion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "es_preventivo": "boolean",
+        "maintenance_form_type": "text",
+        "activo": "boolean",
+        "categoria": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← maintenance_alerts.usuario_id → maintenance_types.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "malencaminados": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "observacion": "text",
+        "malencaminamiento": "integer",
+        "paquetes_ems_id": "bigint",
+        "paquetes_contrato_id": "bigint",
+        "destino_anterior": "text",
+        "destino_nuevo": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "departamento_origen": "text",
+        "paquetes_certi_id": "bigint",
+        "paquetes_ordi_id": "bigint",
+        "user_id": "bigint"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← malencaminados.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "origen": {
+      "columns": {
+        "id": "bigint",
+        "nombre_origen": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_ems.user_id → tarifario.id → origen.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "paquetes_certi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "destinatario": "text",
+        "telefono": "integer",
+        "cuidad": "text",
+        "zona": "text",
+        "ventanilla": "text",
+        "peso": "numeric",
+        "tipo": "text",
+        "aduana": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "fk_estado": "bigint",
+        "fk_ventanilla": "bigint",
+        "cod_especial": "text",
+        "precio": "numeric",
+        "servicio_id": "bigint",
+        "observaciones": "text"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← bitacoras.user_id → paquetes_certi.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "paquetes_contrato": {
+      "columns": {
+        "id": "bigint",
+        "user_id": "bigint",
+        "codigo": "text",
+        "origen": "text",
+        "destino": "text",
+        "nombre_r": "text",
+        "telefono_r": "text",
+        "contenido": "text",
+        "direccion_r": "text",
+        "nombre_d": "text",
+        "telefono_d": "text",
+        "direccion_d": "text",
+        "provincia": "text",
+        "peso": "numeric",
+        "fecha_recojo": "timestamp",
+        "observacion": "text",
+        "justificacion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "estados_id": "bigint",
+        "cod_especial": "text",
+        "empresa_id": "bigint",
+        "precio": "numeric",
+        "tarifa_contrato_id": "bigint",
+        "cantidad": "text",
+        "codigo_madre": "text",
+        "provincia_origen": "text",
+        "destino_registrado": "text",
+        "envio_cn33": "timestamp"
+      },
+      "presence": [
+        "mapa",
+        "imagen"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_contrato.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "paquetes_ems": {
+      "columns": {
+        "id": "bigint",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "codigo": "text",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "ciudad": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "user_id": "bigint",
+        "tarifario_id": "bigint",
+        "servicio_especial": "text",
+        "estado_id": "bigint",
+        "cod_especial": "text",
+        "direccion": "text",
+        "referencia": "text",
+        "observacion": "text",
+        "justificacion": "text",
+        "envio_cn33": "timestamp",
+        "correo_electronico": "text"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_ems.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "paquetes_ems_formulario": {
+      "columns": {
+        "id": "bigint",
+        "paquete_ems_id": "bigint",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "servicio_especial": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "codigo": "text",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "ciudad": "text",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "tarifario_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "direccion": "text",
+        "referencia": "text",
+        "correo_electronico": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_ems.user_id ← paquetes_ems_formulario.paquete_ems_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "paquetes_ordi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "destinatario": "text",
+        "telefono": "text",
+        "ciudad": "text",
+        "zona": "text",
+        "peso": "numeric",
+        "aduana": "text",
+        "observaciones": "text",
+        "cod_especial": "text",
+        "fk_ventanilla": "bigint",
+        "fk_estado": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "pais": "text",
+        "iso": "text",
+        "tipo": "text",
+        "precio": "numeric",
+        "factura": "text",
+        "manifiesto": "text",
+        "servicio_id": "bigint"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← bitacoras.user_id → paquetes_ordi.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "peso": {
+      "columns": {
+        "id": "bigint",
+        "peso_inicial": "numeric",
+        "peso_final": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_ems.user_id → tarifario.id → peso.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "preregistros": {
+      "columns": {
+        "id": "bigint",
+        "estado": "text",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "servicio_especial": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "direccion": "text",
+        "ciudad": "text",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "validado_por": "bigint",
+        "validado_at": "timestamp",
+        "paquete_ems_id": "bigint",
+        "codigo_generado": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_preregistro": "text",
+        "correo_electronico": "text",
+        "referencia": "text",
+        "observacion": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← preregistros.validado_por. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "roles": {
+      "columns": {
+        "id": "bigint",
+        "name": "text",
+        "guard_name": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "nombre": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id → roles.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "servicio": {
+      "columns": {
+        "id": "bigint",
+        "nombre_servicio": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "actividadEconomica": "text",
+        "codigoSin": "text",
+        "codigo": "text",
+        "descripcion": "text",
+        "unidadMedida": "integer"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← preregistros.validado_por → servicio.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "servicio_extras": {
+      "columns": {
+        "id": "integer",
+        "nombre": "text",
+        "descripcion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero.id_user → solicitud_clientes.id → servicio_extras.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "solicitud_clientes": {
+      "columns": {
+        "id": "integer",
+        "cliente_id": "bigint",
+        "codigo_solicitud": "text",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "servicio_especial": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "direccion": "text",
+        "ciudad": "text",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "tarifario_tiktoker_id": "bigint",
+        "servicio_extra_id": "bigint",
+        "direccion_recojo": "text",
+        "barcode": "text",
+        "estado_id": "bigint",
+        "pago_destinatario": "boolean",
+        "cod_especial": "text",
+        "recepcionado_por": "text",
+        "observacion": "text",
+        "justificacion": "text",
+        "envio_cn33": "timestamp",
+        "paquete_muy_grande": "boolean"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero.id_user → solicitud_clientes.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "sucursales": {
+      "columns": {
+        "id": "bigint",
+        "codigoSucursal": "integer",
+        "puntoVenta": "integer",
+        "municipio": "text",
+        "departamento": "text",
+        "telefono": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado). Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "tarifa_contrato": {
+      "columns": {
+        "id": "bigint",
+        "empresa_id": "bigint",
+        "origen": "text",
+        "destino": "text",
+        "servicio": "text",
+        "kilo": "numeric",
+        "kilo_extra": "numeric",
+        "provincia": "text",
+        "retencion": "numeric",
+        "horas_entrega": "integer",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "direccion": "text",
+        "zona": "text",
+        "peso": "numeric",
+        "provincia_origen": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_contrato.user_id → tarifa_contrato.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "tarifario": {
+      "columns": {
+        "id": "bigint",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "peso_id": "bigint",
+        "origen_id": "bigint",
+        "precio": "numeric",
+        "observacion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← paquetes_ems.user_id → tarifario.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "tarifario_tiktoker": {
+      "columns": {
+        "id": "integer",
+        "origen_id": "bigint",
+        "destino_id": "bigint",
+        "peso1": "numeric",
+        "peso2": "numeric",
+        "peso3": "numeric",
+        "peso_extra": "numeric",
+        "tiempo_entrega": "integer",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "servicio_extra_id": "bigint"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← cartero.id_user → solicitud_clientes.id → tarifario_tiktoker.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "users": {
+      "columns": {
+        "id": "bigint",
+        "name": "text",
+        "email": "text",
+        "ciudad": "text",
+        "ci": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp",
+        "empresa_id": "bigint",
+        "alias": "text",
+        "role_id": "bigint",
+        "sucursal_id": "bigint",
+        "regionales": "jsonb",
+        "auto_baja_empresa_at": "timestamp",
+        "provincia_origen": "text"
+      },
+      "presence": [],
+      "excluded": [
+        "email_verified_at",
+        "password",
+        "remember_token"
+      ],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "vehicle_assignments": {
+      "columns": {
+        "id": "bigint",
+        "driver_id": "bigint",
+        "vehicle_id": "bigint",
+        "tipo_asignacion": "text",
+        "fecha_inicio": "timestamp",
+        "fecha_fin": "timestamp",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← drivers.user_id ← vehicle_assignments.driver_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "vehicle_log": {
+      "columns": {
+        "id": "bigint",
+        "drivers_id": "bigint",
+        "vehicles_id": "bigint",
+        "fuel_log_id": "bigint",
+        "fecha": "date",
+        "kilometraje_salida": "numeric",
+        "kilometraje_llegada": "numeric",
+        "recorrido_inicio": "text",
+        "recorrido_destino": "text",
+        "abastecimiento_combustible": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "latitud_inicio": "numeric",
+        "logitud_inicio": "numeric",
+        "latitud_destino": "numeric",
+        "logitud_destino": "numeric",
+        "kilometraje_recorrido": "numeric",
+        "responsible_driver_id": "bigint",
+        "current_driver_id": "bigint",
+        "activo": "boolean",
+        "cantidad_paquetes": "integer"
+      },
+      "presence": [
+        "firma_digital",
+        "ruta_json",
+        "odometro_photo_path"
+      ],
+      "excluded": [
+        "session_reference"
+      ],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← drivers.user_id ← vehicle_log.drivers_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "vehicle_log_investigation_tickets": {
+      "columns": {
+        "id": "bigint",
+        "ticket_code": "text",
+        "vehicle_id": "bigint",
+        "responsible_driver_id": "bigint",
+        "current_driver_id": "bigint",
+        "related_user_id": "bigint",
+        "reason_type": "text",
+        "status": "text",
+        "message": "text",
+        "packages_total": "integer",
+        "packages_open": "integer",
+        "packages_delivered": "integer",
+        "opened_at": "timestamp",
+        "closed_at": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [
+        "meta_json"
+      ],
+      "excluded": [
+        "session_reference"
+      ],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← vehicle_log_investigation_tickets.related_user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "vehicles": {
+      "columns": {
+        "id": "bigint",
+        "placa": "text",
+        "marca": "text",
+        "modelo": "text",
+        "tipo_combustible": "text",
+        "color": "text",
+        "anio": "integer",
+        "capacidad_tanque": "numeric",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp",
+        "marca_id": "bigint",
+        "vehicle_class_id": "bigint",
+        "kilometraje": "numeric",
+        "kilometraje_inicial": "numeric",
+        "kilometraje_actual": "numeric",
+        "operational_status": "text",
+        "tacometro_danado": "boolean",
+        "maintenance_form_type": "text",
+        "chasis": "text",
+        "motor": "text"
+      },
+      "presence": [
+        "kilometraje_inicial_photo_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← fuel_antifraud_cases.reviewed_by_user_id → vehicles.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "ventanilla": {
+      "columns": {
+        "id": "bigint",
+        "nombre_ventanilla": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_details_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← bitacoras.user_id → paquetes_certi.id → ventanilla.id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "workshop_catalogs": {
+      "columns": {
+        "id": "bigint",
+        "nombre": "text",
+        "tipo": "text",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "user_id": "bigint",
+        "celular": "text"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← workshop_catalogs.user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "workshop_part_changes": {
+      "columns": {
+        "id": "bigint",
+        "workshop_id": "bigint",
+        "codigo_pieza_nueva": "text",
+        "codigo_pieza_antigua": "text",
+        "descripcion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "costo": "numeric"
+      },
+      "presence": [],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← workshops.approved_by_user_id ← workshop_part_changes.workshop_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    },
+    "workshops": {
+      "columns": {
+        "id": "bigint",
+        "vehicle_id": "bigint",
+        "driver_id": "bigint",
+        "maintenance_appointment_id": "bigint",
+        "maintenance_log_id": "bigint",
+        "nombre_taller": "text",
+        "fecha_ingreso": "date",
+        "fecha_salida": "date",
+        "estado": "text",
+        "pre_entrada_estado": "text",
+        "diagnostico": "text",
+        "observaciones": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "workshop_catalog_id": "bigint",
+        "maintenance_alert_id": "bigint",
+        "order_number": "text",
+        "fecha_prometida_entrega": "date",
+        "fecha_listo": "date",
+        "observaciones_tecnicas": "text",
+        "workflow_kind": "text",
+        "approval_required": "boolean",
+        "fixed_catalog_cost": "numeric",
+        "labor_cost": "numeric",
+        "additional_cost": "numeric",
+        "total_cost": "numeric",
+        "diagnosis_requested_at": "timestamp",
+        "fecha_aprobacion": "timestamp",
+        "fecha_cierre": "timestamp",
+        "dispatched_by_user_id": "bigint",
+        "diagnosed_by_user_id": "bigint",
+        "approved_by_user_id": "bigint",
+        "closed_by_user_id": "bigint",
+        "reassigned_from_workshop_catalog_id": "bigint",
+        "rejection_reason": "text",
+        "cancellation_reason": "text",
+        "activo": "boolean"
+      },
+      "presence": [
+        "reception_photo_path",
+        "damage_photo_path",
+        "invoice_file_path",
+        "receipt_file_path"
+      ],
+      "excluded": [],
+      "source_schema": "chatbot_relations_source",
+      "path_info": "sucursales (registro solicitado) ← users.sucursal_id ← workshops.approved_by_user_id. Ruta de ejemplo; la consulta reúne todos los caminos FK válidos."
+    }
+  },
+  "foreign_keys": [
+    {
+      "child": "alerta_empresa_destinatarios",
+      "parent": "alertas_empresa",
+      "child_columns": [
+        "alerta_empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alerta_empresa_destinatarios",
+      "parent": "empresa",
+      "child_columns": [
+        "empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alerta_empresa_lecturas",
+      "parent": "alertas_empresa",
+      "child_columns": [
+        "alerta_empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alerta_empresa_lecturas",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alerta_empresa_usuarios",
+      "parent": "alertas_empresa",
+      "child_columns": [
+        "alerta_empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alerta_empresa_usuarios",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alertas_empresa",
+      "parent": "users",
+      "child_columns": [
+        "aprobada_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "alertas_empresa",
+      "parent": "users",
+      "child_columns": [
+        "creado_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "bitacoras",
+      "parent": "paquetes_certi",
+      "child_columns": [
+        "paquetes_certi_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "bitacoras",
+      "parent": "paquetes_contrato",
+      "child_columns": [
+        "paquetes_contrato_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "bitacoras",
+      "parent": "paquetes_ems",
+      "child_columns": [
+        "paquetes_ems_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "bitacoras",
+      "parent": "paquetes_ordi",
+      "child_columns": [
+        "paquetes_ordi_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "bitacoras",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero_assignment_report_items",
+      "parent": "cartero_assignment_reports",
+      "child_columns": [
+        "cartero_assignment_report_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero_assignment_reports",
+      "parent": "users",
+      "child_columns": [
+        "actor_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero_assignment_reports",
+      "parent": "users",
+      "child_columns": [
+        "assigned_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero_guias",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "estados",
+      "child_columns": [
+        "id_estado_anterior"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "estados",
+      "child_columns": [
+        "id_estados"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "paquetes_certi",
+      "child_columns": [
+        "id_paquetes_certi"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "paquetes_contrato",
+      "child_columns": [
+        "id_paquetes_contrato"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "paquetes_ems",
+      "child_columns": [
+        "id_paquetes_ems"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "paquetes_ordi",
+      "child_columns": [
+        "id_paquetes_ordi"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "solicitud_clientes",
+      "child_columns": [
+        "id_solicitud_cliente"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cartero",
+      "parent": "users",
+      "child_columns": [
+        "id_user"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cashier_flow_receivable_collections",
+      "parent": "users",
+      "child_columns": [
+        "cobrado_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cashier_flow_receivable_collections",
+      "parent": "users",
+      "child_columns": [
+        "devuelto_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cashier_flow_receivable_movements",
+      "parent": "users",
+      "child_columns": [
+        "cobrado_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "cashier_flow_receivable_movements",
+      "parent": "users",
+      "child_columns": [
+        "devuelto_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "chasqui_location_points",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "conciliacion_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "conciliado_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "confirmacion_pago_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "documento_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "empresa",
+      "child_columns": [
+        "empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "gestora_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "pago_recibido_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "conciliaciones_empresa",
+      "parent": "users",
+      "child_columns": [
+        "por_cobrar_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "driver_incentive_reports",
+      "parent": "drivers",
+      "child_columns": [
+        "driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "drivers",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "empresa_historiales",
+      "parent": "users",
+      "child_columns": [
+        "archivado_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "empresa_historiales",
+      "parent": "empresa",
+      "child_columns": [
+        "empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_auditoria",
+      "parent": "auditoria",
+      "child_columns": [
+        "auditoria_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_auditoria",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_certi",
+      "parent": "eventos",
+      "child_columns": [
+        "evento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_certi",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_contrato",
+      "parent": "eventos",
+      "child_columns": [
+        "evento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_contrato",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_despacho",
+      "parent": "eventos",
+      "child_columns": [
+        "evento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_despacho",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_ems",
+      "parent": "eventos",
+      "child_columns": [
+        "evento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_ems",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_ordi",
+      "parent": "eventos",
+      "child_columns": [
+        "evento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_ordi",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_tiktoker",
+      "parent": "clientes",
+      "child_columns": [
+        "cliente_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_tiktoker",
+      "parent": "eventos",
+      "child_columns": [
+        "evento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "eventos_tiktoker",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "drivers",
+      "child_columns": [
+        "conflicting_driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "fuel_invoices",
+      "child_columns": [
+        "conflicting_fuel_invoice_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "vehicles",
+      "child_columns": [
+        "conflicting_vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "drivers",
+      "child_columns": [
+        "driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "fuel_invoices",
+      "child_columns": [
+        "fuel_invoice_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "users",
+      "child_columns": [
+        "reviewed_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_antifraud_cases",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_invoice_details",
+      "parent": "fuel_invoices",
+      "child_columns": [
+        "fuel_invoice_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_invoice_details",
+      "parent": "fuel_logs",
+      "child_columns": [
+        "fuel_log_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_invoice_details",
+      "parent": "gas_stations",
+      "child_columns": [
+        "gas_station_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "fuel_invoices",
+      "parent": "gas_stations",
+      "child_columns": [
+        "gas_station_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_alert_user_reads",
+      "parent": "maintenance_alerts",
+      "child_columns": [
+        "maintenance_alert_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_alert_user_reads",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_alerts",
+      "parent": "maintenance_appointments",
+      "child_columns": [
+        "maintenance_appointment_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_alerts",
+      "parent": "maintenance_types",
+      "child_columns": [
+        "maintenance_type_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_alerts",
+      "parent": "users",
+      "child_columns": [
+        "usuario_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_alerts",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_appointments",
+      "parent": "users",
+      "child_columns": [
+        "approved_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_appointments",
+      "parent": "drivers",
+      "child_columns": [
+        "driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_appointments",
+      "parent": "users",
+      "child_columns": [
+        "requested_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_appointments",
+      "parent": "maintenance_types",
+      "child_columns": [
+        "tipo_mantenimiento_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_appointments",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_logs",
+      "parent": "maintenance_types",
+      "child_columns": [
+        "maintenance_type_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "maintenance_logs",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "malencaminados",
+      "parent": "paquetes_certi",
+      "child_columns": [
+        "paquetes_certi_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "malencaminados",
+      "parent": "paquetes_contrato",
+      "child_columns": [
+        "paquetes_contrato_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "malencaminados",
+      "parent": "paquetes_ems",
+      "child_columns": [
+        "paquetes_ems_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "malencaminados",
+      "parent": "paquetes_ordi",
+      "child_columns": [
+        "paquetes_ordi_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "malencaminados",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_certi",
+      "parent": "estados",
+      "child_columns": [
+        "fk_estado"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_certi",
+      "parent": "ventanilla",
+      "child_columns": [
+        "fk_ventanilla"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_certi",
+      "parent": "servicio",
+      "child_columns": [
+        "servicio_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_contrato",
+      "parent": "empresa",
+      "child_columns": [
+        "empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_contrato",
+      "parent": "estados",
+      "child_columns": [
+        "estados_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_contrato",
+      "parent": "tarifa_contrato",
+      "child_columns": [
+        "tarifa_contrato_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ems",
+      "parent": "estados",
+      "child_columns": [
+        "estado_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ems_formulario",
+      "parent": "paquetes_ems",
+      "child_columns": [
+        "paquete_ems_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ems",
+      "parent": "tarifario",
+      "child_columns": [
+        "tarifario_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ems",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ordi",
+      "parent": "estados",
+      "child_columns": [
+        "fk_estado"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ordi",
+      "parent": "ventanilla",
+      "child_columns": [
+        "fk_ventanilla"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_ordi",
+      "parent": "servicio",
+      "child_columns": [
+        "servicio_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "preregistros",
+      "parent": "destino",
+      "child_columns": [
+        "destino_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "preregistros",
+      "parent": "paquetes_ems",
+      "child_columns": [
+        "paquete_ems_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "preregistros",
+      "parent": "servicio",
+      "child_columns": [
+        "servicio_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "preregistros",
+      "parent": "users",
+      "child_columns": [
+        "validado_por"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "paquetes_contrato",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "solicitud_clientes",
+      "parent": "clientes",
+      "child_columns": [
+        "cliente_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "solicitud_clientes",
+      "parent": "destino",
+      "child_columns": [
+        "destino_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "solicitud_clientes",
+      "parent": "estados",
+      "child_columns": [
+        "estado_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "solicitud_clientes",
+      "parent": "servicio_extras",
+      "child_columns": [
+        "servicio_extra_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "solicitud_clientes",
+      "parent": "servicio",
+      "child_columns": [
+        "servicio_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "solicitud_clientes",
+      "parent": "tarifario_tiktoker",
+      "child_columns": [
+        "tarifario_tiktoker_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifa_contrato",
+      "parent": "empresa",
+      "child_columns": [
+        "empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario",
+      "parent": "destino",
+      "child_columns": [
+        "destino_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario",
+      "parent": "origen",
+      "child_columns": [
+        "origen_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario",
+      "parent": "peso",
+      "child_columns": [
+        "peso_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario",
+      "parent": "servicio",
+      "child_columns": [
+        "servicio_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario_tiktoker",
+      "parent": "destino",
+      "child_columns": [
+        "destino_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario_tiktoker",
+      "parent": "origen",
+      "child_columns": [
+        "origen_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "tarifario_tiktoker",
+      "parent": "servicio_extras",
+      "child_columns": [
+        "servicio_extra_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "users",
+      "parent": "empresa",
+      "child_columns": [
+        "empresa_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "users",
+      "parent": "roles",
+      "child_columns": [
+        "role_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "users",
+      "parent": "sucursales",
+      "child_columns": [
+        "sucursal_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_assignments",
+      "parent": "drivers",
+      "child_columns": [
+        "driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_assignments",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log",
+      "parent": "drivers",
+      "child_columns": [
+        "drivers_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log",
+      "parent": "fuel_invoice_details",
+      "child_columns": [
+        "fuel_log_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log_investigation_tickets",
+      "parent": "drivers",
+      "child_columns": [
+        "current_driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log_investigation_tickets",
+      "parent": "users",
+      "child_columns": [
+        "related_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log_investigation_tickets",
+      "parent": "drivers",
+      "child_columns": [
+        "responsible_driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log_investigation_tickets",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "vehicle_log",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicles_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshop_catalogs",
+      "parent": "users",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshop_part_changes",
+      "parent": "workshops",
+      "child_columns": [
+        "workshop_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "users",
+      "child_columns": [
+        "approved_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "users",
+      "child_columns": [
+        "closed_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "users",
+      "child_columns": [
+        "diagnosed_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "users",
+      "child_columns": [
+        "dispatched_by_user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "drivers",
+      "child_columns": [
+        "driver_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "maintenance_alerts",
+      "child_columns": [
+        "maintenance_alert_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "maintenance_appointments",
+      "child_columns": [
+        "maintenance_appointment_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "maintenance_logs",
+      "child_columns": [
+        "maintenance_log_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "workshop_catalogs",
+      "child_columns": [
+        "reassigned_from_workshop_catalog_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "vehicles",
+      "child_columns": [
+        "vehicle_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    },
+    {
+      "child": "workshops",
+      "parent": "workshop_catalogs",
+      "child_columns": [
+        "workshop_catalog_id"
+      ],
+      "parent_columns": [
+        "id"
+      ]
+    }
+  ],
+  "excluded_tables": {
+    "activity_logs": "Metadatos de autenticación, seguridad o snapshots; no se exponen datos operativos de esta tabla.",
+    "external_api_tokens": "Metadatos de autenticación, seguridad o snapshots; no se exponen datos operativos de esta tabla.",
+    "mobile_db_snapshots": "Metadatos de autenticación, seguridad o snapshots; no se exponen datos operativos de esta tabla.",
+    "user_ips_links": "Metadatos de autenticación, seguridad o snapshots; no se exponen datos operativos de esta tabla.",
+    "user_login_logs": "Metadatos de autenticación, seguridad o snapshots; no se exponen datos operativos de esta tabla."
+  },
+  "method": "All incoming FK paths; then outgoing lookup closure, without reverse lookup expansion."
+}

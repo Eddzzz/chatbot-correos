@@ -1,7 +1,7 @@
 import asyncio
 import json
 from uuid import uuid4
-from fastapi import FastAPI, Header, Request
+from fastapi import FastAPI, Header, Request, Path, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.contracts import ChatRequest, ServiceError
 
@@ -43,6 +43,14 @@ def register_routes(app: FastAPI, settings, identity, conversation, audit):
     @app.get('/api/sessions')
     async def sessions(authorization: str | None = Header(default=None)):
         return conversation.list_sessions(principal(authorization))
+
+    @app.get('/api/offices/{office_id}/relations')
+    async def office_tables(office_id: int = Path(gt=0), authorization: str | None = Header(default=None)):
+        return await conversation.office_related_tables(office_id, principal(authorization))
+
+    @app.get('/api/offices/{office_id}/relations/{table_name}')
+    async def office_records(office_id: int = Path(gt=0), table_name: str = Path(pattern=r'^[a-z_]+$', max_length=80), offset: int = Query(default=0, ge=0, le=10000000), limit: int = Query(default=10, ge=1, le=20), authorization: str | None = Header(default=None)):
+        return await conversation.office_related_records(office_id, table_name, offset, limit, principal(authorization))
 
     @app.get('/api/sessions/{session_id}')
     @app.get('/api/sessions/{session_id}/history')
