@@ -2,7 +2,7 @@
 
 Implementación local del plan: FastAPI modular, React/TypeScript, PostgreSQL de solo lectura y una instancia de Qwen3.5-2B Q4_K_M servida por llama.cpp **solo CPU**. Windows es el entorno validado. Incluye plantillas systemd/Nginx para Linux, aún sin despliegue institucional.
 
-El esquema se obtuvo del respaldo suministrado: 122 tablas y 159 claves foráneas. **La aplicación ya está conectada a datos reales de ese respaldo:** 74.137 registros de seguimiento y 9 sucursales, mediante una proyección local de siete tablas. La importación conserva únicamente columnas aprobadas, sin nombres, teléfonos personales, direcciones ni imágenes. El archivo original permanece intacto. El respaldo fue creado el **8 de octubre de 2026 a las 14:59:32**, sin zona horaria declarada; no es una conexión con actualizaciones en vivo.
+El esquema se obtuvo del respaldo suministrado: 122 tablas y 159 claves foráneas. **La aplicación ya está conectada a datos reales de ese respaldo:** 74.137 registros de seguimiento y 9 sucursales. La proyección resumida de siete tablas excluye datos personales; las fichas completas autorizadas disponen de una proyección privada adicional de 23 tablas, sin contraseñas, tokens ni contenido de adjuntos. El archivo original permanece intacto. El respaldo fue creado el **8 de octubre de 2026 a las 14:59:32**, sin zona horaria declarada; no es una conexión con actualizaciones en vivo.
 
 ## Estado actual: datos reales
 
@@ -11,6 +11,8 @@ Los servicios locales están configurados para la base `correos_sandbox_institut
 Para reiniciar la API usar `./scripts/start_backend.ps1` **sin** `-Fixture`; carga automáticamente `.runtime/institutional-env.json`. Inferencia y frontend se arrancan como se indica debajo. El cluster PostgreSQL local debe estar activo. `-Fixture` sigue disponible para volver explícitamente a los datos ficticios sin modificar la base real importada.
 
 Validación reproducible con la API activa: `backend/.venv/Scripts/python.exe scripts/check_institutional.py`. Compara seguimiento y conteos contra PostgreSQL, comprueba las nueve sucursales y verifica la procedencia. [Resultados y reglas verificadas](docs/institutional-data.md).
+
+Las [fichas completas](docs/full-details.md) amplían sucursales y envíos con sus campos y relaciones revisadas, incluidos datos personales para identidades con `personal_data`. Después de consultar una sucursal o código, escribir «dame los datos completos» mantiene ese contexto. Contraseñas/tokens quedan excluidos; los adjuntos se indican por presencia y las listas asociadas tienen límites visibles.
 
 ## Preparar un entorno de demostración desde cero
 

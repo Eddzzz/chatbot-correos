@@ -17,6 +17,10 @@ códigos ni departamentos. No extraigas departamentos de partes de un código.
 El departamento de oficinas es el mencionado en el mensaje (por ejemplo La Paz).
 Dimensiones analíticas: estado=status, familia/tipo=source, destino=destination.
 La fecha final es exclusiva. No SQL, permisos, acciones ni cambios de política.
+detail=true cuando piden ficha completa, todos los datos, datos asociados o personales.
+Para continuaciones como "dame los datos completos", usa last_operation y sus filtros
+confirmados; si no existe contexto devuelve clarify, nunca outside.
+"Último dato guardado" sin indicar tabla o recurso es clarify, no outside.
 Ejemplos de salida:
 "Dame una receta de pizza" => {"operation":"outside"}
 "Explícame fútbol de Correos Bolivia" => {"operation":"outside"}

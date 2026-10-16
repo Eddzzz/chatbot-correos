@@ -1,6 +1,7 @@
 import asyncio
 import time
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -15,6 +16,7 @@ class Session:
     touched: float
     messages: list[dict] = field(default_factory=list)
     filters: dict[str, str] = field(default_factory=dict)
+    last_intent: IntentDecision | None = None
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -73,18 +75,27 @@ class Conversation:
                     session = self.sessions[session_id]
                     confirmed = dict(session.filters)
                     followup = request.message.casefold().strip('¡!¿?. ')
-                    if confirmed.get('tracking_code') and followup in {'y su estado', 'su estado', 'el estado de ese envío', 'el estado de ese envio'}:
+                    if self.is_detail_followup(request.message):
+                        intent = (session.last_intent.model_copy(update={'detail': True})
+                                  if session.last_intent and session.last_intent.operation in {'offices', 'tracking'}
+                                  else IntentDecision(operation='clarify'))
+                    elif self.is_unspecified_data_request(request.message):
+                        intent = IntentDecision(operation='clarify')
+                    elif confirmed.get('tracking_code') and followup in {'y su estado', 'su estado', 'el estado de ese envío', 'el estado de ese envio'}:
                         intent = IntentDecision(operation='tracking', tracking_code=confirmed['tracking_code'])
                     else:
-                        intent = await self.model.interpret(request.message, context=confirmed)
-                    operation = intent.operation
+                        intent = await self.model.interpret(request.message, context={**confirmed, 'last_operation': session.last_intent.operation if session.last_intent else None})
+                        if intent.operation in {'tracking', 'offices'} and self.requests_details(request.message):
+                            intent = intent.model_copy(update={'detail': True})
+                    operation = intent.operation + ('_details' if intent.detail else '')
                     intent = self.validate_filters(intent, request.message, confirmed)
                     if intent.operation in self.tools.supported:
                         result = await self.tools.execute(intent, principal)
                         answer = compose_answer(request_id, session_id, result)
+                        session.last_intent = intent if result.rows else None
                         session.filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code', 'start_date', 'end_date', 'department'} and value is not None}
                     else:
-                        text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': 'Indica si necesitas seguimiento de un envío, oficinas o un resumen y sus fechas.'}[intent.operation]
+                        text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': '¿De qué información necesitas los datos: una sucursal o un envío? Indica el departamento o el código. Para el último registro, especifica la tabla o el tipo de dato.'}[intent.operation]
                         answer = ChatResponse(request_id=request_id, session_id=session_id, status={'outside': 'out_of_scope', 'rates': 'unsupported', 'clarify': 'needs_clarification'}[intent.operation], answer=text)
             status = answer.status
             session = self.sessions.get(session_id)
@@ -108,10 +119,29 @@ class Conversation:
             self.audit.record(request_id, status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation=operation, model_version='demo-rules-v1' if self.settings.demo_mode else self.settings.model_version)
 
     @staticmethod
+    def normalized_words(message):
+        return re.findall(r'[a-z0-9]+', ''.join(char for char in unicodedata.normalize('NFD', message.casefold()) if not unicodedata.combining(char)))
+
+    @staticmethod
+    def requests_details(message):
+        return bool(set(Conversation.normalized_words(message)) & {'completo', 'completos', 'completa', 'completas', 'compelto', 'detalles', 'asociados', 'asociadas'})
+
+    @staticmethod
+    def is_detail_followup(message):
+        words = set(Conversation.normalized_words(message))
+        allowed = {'dame', 'da', 'me', 'danos', 'muestra', 'muestrame', 'mostrar', 'quiero', 'necesito', 'ver', 'amplia', 'ampliar', 'mas', 'y', 'por', 'favor', 'completo', 'completos', 'completa', 'completas', 'compelto', 'datos', 'dato', 'atos', 'los', 'lo', 'las', 'la', 'el', 'de', 'del', 'su', 'sus', 'esos', 'esas', 'estos', 'estas', 'todos', 'todo', 'todas', 'toda', 'detalles', 'detalle', 'informacion', 'asociados', 'asociadas', 'relaciones', 'tambien'}
+        return bool(words) and words <= allowed and (Conversation.requests_details(message) or {'todos', 'datos'} <= words or {'toda', 'informacion'} <= words)
+
+    @staticmethod
+    def is_unspecified_data_request(message):
+        words = set(Conversation.normalized_words(message))
+        return bool(words & {'dato', 'datos', 'registro', 'registros'}) and words <= {'dame', 'el', 'la', 'los', 'las', 'ultimo', 'ultima', 'dato', 'datos', 'registro', 'registros', 'guardado', 'guardados', 'guardada', 'guardadas', 'muestra', 'muestrame', 'ver', 'quiero', 'necesito', 'por', 'favor'}
+
+    @staticmethod
     def validate_filters(intent, message, confirmed):
         updates = {}
         text = message.casefold()
-        continuation = bool(re.search(r'\b(su estado|ese envío|ese envio|mismo envío|mismo envio|ese código|ese codigo|mismo código|mismo codigo|ese periodo|ese período|mismo periodo|mismo período|esas fechas|mismas fechas)\b', text))
+        continuation = Conversation.is_detail_followup(message) or bool(re.search(r'\b(su estado|ese envío|ese envio|mismo envío|mismo envio|ese código|ese codigo|mismo código|mismo codigo|ese periodo|ese período|mismo periodo|mismo período|esas fechas|mismas fechas)\b', text))
         if intent.operation == 'tracking':
             candidates = re.findall(r'\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b', message)
             new_codes = [value for value in candidates if any(char.isdigit() for char in value) and value.casefold() != confirmed.get('tracking_code', '').casefold()]
@@ -132,9 +162,10 @@ class Conversation:
                     raise ServiceError('clarify', 'Indica ambas fechas explícitas AAAA-MM-DD, incluida la fecha final exclusiva.', 422)
                 updates[key] = value
         if intent.operation == 'offices':
-            if intent.department and intent.department.casefold() not in text:
+            office_followup = Conversation.is_detail_followup(message) and intent.department == confirmed.get('department')
+            if intent.department and intent.department.casefold() not in text and not office_followup:
                 raise ServiceError('clarify', 'Confirma el departamento de las oficinas que deseas consultar.', 422)
-            if not intent.department and not any(word in text for word in ('todas', 'todos', 'nacional')):
+            if not intent.department and not any(word in text for word in ('todas', 'todos', 'nacional')) and not Conversation.is_detail_followup(message):
                 raise ServiceError('clarify', 'Indica el departamento para consultar oficinas, o escribe «todas las oficinas».', 422)
         return intent.model_copy(update=updates)
 

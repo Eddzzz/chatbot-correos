@@ -1,0 +1,771 @@
+{
+  "tables": {
+    "bitacoras": {
+      "columns": {
+        "id": "bigint",
+        "paquetes_ems_id": "bigint",
+        "paquetes_contrato_id": "bigint",
+        "user_id": "bigint",
+        "cod_especial": "text",
+        "transportadora": "text",
+        "provincia": "text",
+        "factura": "text",
+        "precio_total": "numeric",
+        "peso": "numeric",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "paquetes_ordi_id": "bigint",
+        "paquetes_certi_id": "bigint",
+        "factura_fecha_emision": "timestamp",
+        "factura_nit_emisor": "text",
+        "factura_cuf": "text",
+        "factura_razon_social": "text",
+        "factura_cliente": "text",
+        "factura_direccion": "text"
+      },
+      "presence": [
+        "imagen_factura",
+        "qr_url",
+        "qr_texto",
+        "qr_datos"
+      ],
+      "excluded": []
+    },
+    "cartero": {
+      "columns": {
+        "id": "bigint",
+        "id_paquetes_ems": "bigint",
+        "id_paquetes_certi": "bigint",
+        "id_estados": "bigint",
+        "id_user": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "intento": "integer",
+        "recibido_por": "text",
+        "descripcion": "text",
+        "id_paquetes_contrato": "bigint",
+        "id_paquetes_ordi": "bigint",
+        "id_solicitud_cliente": "bigint",
+        "id_estado_anterior": "bigint"
+      },
+      "presence": [
+        "foto",
+        "imagen",
+        "imagen_devolucion"
+      ],
+      "excluded": []
+    },
+    "empresa": {
+      "columns": {
+        "id": "bigint",
+        "nombre": "text",
+        "sigla": "text",
+        "codigo_cliente": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "clasificacion": "text",
+        "inicio_contrato": "date",
+        "fin_contrato": "date",
+        "cobertura": "text",
+        "presupuesto": "numeric",
+        "nit": "text"
+      },
+      "presence": [
+        "documentacion_legal",
+        "documento_pdf_path"
+      ],
+      "excluded": []
+    },
+    "estados": {
+      "columns": {
+        "id": "bigint",
+        "nombre_estado": "text",
+        "activo": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "eventos": {
+      "columns": {
+        "id": "bigint",
+        "nombre_evento": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "eventos_certi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "eventos_contrato": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "eventos_ems": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "eventos_ordi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "evento_id": "bigint",
+        "user_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_relacionado": "text",
+        "detalle_evento": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "malencaminados": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "observacion": "text",
+        "malencaminamiento": "integer",
+        "paquetes_ems_id": "bigint",
+        "paquetes_contrato_id": "bigint",
+        "destino_anterior": "text",
+        "destino_nuevo": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "departamento_origen": "text",
+        "paquetes_certi_id": "bigint",
+        "paquetes_ordi_id": "bigint",
+        "user_id": "bigint"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "paquetes_certi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "destinatario": "text",
+        "telefono": "integer",
+        "cuidad": "text",
+        "zona": "text",
+        "ventanilla": "text",
+        "peso": "numeric",
+        "tipo": "text",
+        "aduana": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "fk_estado": "bigint",
+        "fk_ventanilla": "bigint",
+        "cod_especial": "text",
+        "precio": "numeric",
+        "servicio_id": "bigint",
+        "observaciones": "text"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": []
+    },
+    "paquetes_contrato": {
+      "columns": {
+        "id": "bigint",
+        "user_id": "bigint",
+        "codigo": "text",
+        "origen": "text",
+        "destino": "text",
+        "nombre_r": "text",
+        "telefono_r": "text",
+        "contenido": "text",
+        "direccion_r": "text",
+        "nombre_d": "text",
+        "telefono_d": "text",
+        "direccion_d": "text",
+        "provincia": "text",
+        "peso": "numeric",
+        "fecha_recojo": "timestamp",
+        "observacion": "text",
+        "justificacion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "estados_id": "bigint",
+        "cod_especial": "text",
+        "empresa_id": "bigint",
+        "precio": "numeric",
+        "tarifa_contrato_id": "bigint",
+        "cantidad": "text",
+        "codigo_madre": "text",
+        "provincia_origen": "text",
+        "destino_registrado": "text",
+        "envio_cn33": "timestamp"
+      },
+      "presence": [
+        "mapa",
+        "imagen"
+      ],
+      "excluded": []
+    },
+    "paquetes_ems": {
+      "columns": {
+        "id": "bigint",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "codigo": "text",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "ciudad": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "user_id": "bigint",
+        "tarifario_id": "bigint",
+        "servicio_especial": "text",
+        "estado_id": "bigint",
+        "cod_especial": "text",
+        "direccion": "text",
+        "referencia": "text",
+        "observacion": "text",
+        "justificacion": "text",
+        "envio_cn33": "timestamp",
+        "correo_electronico": "text"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": []
+    },
+    "paquetes_ems_formulario": {
+      "columns": {
+        "id": "bigint",
+        "paquete_ems_id": "bigint",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "servicio_especial": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "codigo": "text",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "ciudad": "text",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "tarifario_id": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "direccion": "text",
+        "referencia": "text",
+        "correo_electronico": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "paquetes_int": {
+      "columns": {
+        "id": "bigint",
+        "cod_especial": "text",
+        "codigo": "text",
+        "peso": "numeric",
+        "destino": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "origen": "text",
+        "precio": "numeric",
+        "enviado_admision_at": "timestamp",
+        "servicio_id": "bigint",
+        "estado_id": "bigint",
+        "tramo": "text",
+        "envio_cn33": "timestamp"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "paquetes_ordi": {
+      "columns": {
+        "id": "bigint",
+        "codigo": "text",
+        "destinatario": "text",
+        "telefono": "text",
+        "ciudad": "text",
+        "zona": "text",
+        "peso": "numeric",
+        "aduana": "text",
+        "observaciones": "text",
+        "cod_especial": "text",
+        "fk_ventanilla": "bigint",
+        "fk_estado": "bigint",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "pais": "text",
+        "iso": "text",
+        "tipo": "text",
+        "precio": "numeric",
+        "factura": "text",
+        "manifiesto": "text",
+        "servicio_id": "bigint"
+      },
+      "presence": [
+        "imagen"
+      ],
+      "excluded": []
+    },
+    "preregistros": {
+      "columns": {
+        "id": "bigint",
+        "estado": "text",
+        "origen": "text",
+        "tipo_correspondencia": "text",
+        "servicio_especial": "text",
+        "contenido": "text",
+        "cantidad": "integer",
+        "peso": "numeric",
+        "precio": "numeric",
+        "nombre_remitente": "text",
+        "nombre_envia": "text",
+        "carnet": "text",
+        "telefono_remitente": "text",
+        "nombre_destinatario": "text",
+        "telefono_destinatario": "text",
+        "direccion": "text",
+        "ciudad": "text",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "validado_por": "bigint",
+        "validado_at": "timestamp",
+        "paquete_ems_id": "bigint",
+        "codigo_generado": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "codigo_preregistro": "text",
+        "correo_electronico": "text",
+        "referencia": "text",
+        "observacion": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "servicio": {
+      "columns": {
+        "id": "bigint",
+        "nombre_servicio": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "actividadEconomica": "text",
+        "codigoSin": "text",
+        "codigo": "text",
+        "descripcion": "text",
+        "unidadMedida": "integer"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "sucursales": {
+      "columns": {
+        "id": "bigint",
+        "codigoSucursal": "integer",
+        "puntoVenta": "integer",
+        "municipio": "text",
+        "departamento": "text",
+        "telefono": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "tarifa_contrato": {
+      "columns": {
+        "id": "bigint",
+        "empresa_id": "bigint",
+        "origen": "text",
+        "destino": "text",
+        "servicio": "text",
+        "kilo": "numeric",
+        "kilo_extra": "numeric",
+        "provincia": "text",
+        "retencion": "numeric",
+        "horas_entrega": "integer",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "direccion": "text",
+        "zona": "text",
+        "peso": "numeric",
+        "provincia_origen": "text"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "tarifario": {
+      "columns": {
+        "id": "bigint",
+        "servicio_id": "bigint",
+        "destino_id": "bigint",
+        "peso_id": "bigint",
+        "origen_id": "bigint",
+        "precio": "numeric",
+        "observacion": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": []
+    },
+    "users": {
+      "columns": {
+        "id": "bigint",
+        "name": "text",
+        "email": "text",
+        "ciudad": "text",
+        "ci": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "deleted_at": "timestamp",
+        "empresa_id": "bigint",
+        "alias": "text",
+        "role_id": "bigint",
+        "sucursal_id": "bigint",
+        "regionales": "jsonb",
+        "auto_baja_empresa_at": "timestamp",
+        "provincia_origen": "text"
+      },
+      "presence": [],
+      "excluded": [
+        "email_verified_at",
+        "password",
+        "remember_token"
+      ]
+    },
+    "ventanilla": {
+      "columns": {
+        "id": "bigint",
+        "nombre_ventanilla": "text",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "presence": [],
+      "excluded": []
+    }
+  },
+  "foreign_keys": [
+    {
+      "table": "bitacoras",
+      "column": "paquetes_certi_id",
+      "target": "paquetes_certi",
+      "target_column": "id"
+    },
+    {
+      "table": "bitacoras",
+      "column": "paquetes_contrato_id",
+      "target": "paquetes_contrato",
+      "target_column": "id"
+    },
+    {
+      "table": "bitacoras",
+      "column": "paquetes_ems_id",
+      "target": "paquetes_ems",
+      "target_column": "id"
+    },
+    {
+      "table": "bitacoras",
+      "column": "paquetes_ordi_id",
+      "target": "paquetes_ordi",
+      "target_column": "id"
+    },
+    {
+      "table": "bitacoras",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_estado_anterior",
+      "target": "estados",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_estados",
+      "target": "estados",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_paquetes_certi",
+      "target": "paquetes_certi",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_paquetes_contrato",
+      "target": "paquetes_contrato",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_paquetes_ems",
+      "target": "paquetes_ems",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_paquetes_ordi",
+      "target": "paquetes_ordi",
+      "target_column": "id"
+    },
+    {
+      "table": "cartero",
+      "column": "id_user",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_certi",
+      "column": "evento_id",
+      "target": "eventos",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_certi",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_contrato",
+      "column": "evento_id",
+      "target": "eventos",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_contrato",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_ems",
+      "column": "evento_id",
+      "target": "eventos",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_ems",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_ordi",
+      "column": "evento_id",
+      "target": "eventos",
+      "target_column": "id"
+    },
+    {
+      "table": "eventos_ordi",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "malencaminados",
+      "column": "paquetes_certi_id",
+      "target": "paquetes_certi",
+      "target_column": "id"
+    },
+    {
+      "table": "malencaminados",
+      "column": "paquetes_contrato_id",
+      "target": "paquetes_contrato",
+      "target_column": "id"
+    },
+    {
+      "table": "malencaminados",
+      "column": "paquetes_ems_id",
+      "target": "paquetes_ems",
+      "target_column": "id"
+    },
+    {
+      "table": "malencaminados",
+      "column": "paquetes_ordi_id",
+      "target": "paquetes_ordi",
+      "target_column": "id"
+    },
+    {
+      "table": "malencaminados",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_certi",
+      "column": "fk_estado",
+      "target": "estados",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_certi",
+      "column": "fk_ventanilla",
+      "target": "ventanilla",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_certi",
+      "column": "servicio_id",
+      "target": "servicio",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_contrato",
+      "column": "empresa_id",
+      "target": "empresa",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_contrato",
+      "column": "estados_id",
+      "target": "estados",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_contrato",
+      "column": "tarifa_contrato_id",
+      "target": "tarifa_contrato",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ems",
+      "column": "estado_id",
+      "target": "estados",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ems_formulario",
+      "column": "paquete_ems_id",
+      "target": "paquetes_ems",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ems",
+      "column": "tarifario_id",
+      "target": "tarifario",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ems",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ordi",
+      "column": "fk_estado",
+      "target": "estados",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ordi",
+      "column": "fk_ventanilla",
+      "target": "ventanilla",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_ordi",
+      "column": "servicio_id",
+      "target": "servicio",
+      "target_column": "id"
+    },
+    {
+      "table": "preregistros",
+      "column": "paquete_ems_id",
+      "target": "paquetes_ems",
+      "target_column": "id"
+    },
+    {
+      "table": "preregistros",
+      "column": "servicio_id",
+      "target": "servicio",
+      "target_column": "id"
+    },
+    {
+      "table": "preregistros",
+      "column": "validado_por",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "paquetes_contrato",
+      "column": "user_id",
+      "target": "users",
+      "target_column": "id"
+    },
+    {
+      "table": "tarifa_contrato",
+      "column": "empresa_id",
+      "target": "empresa",
+      "target_column": "id"
+    },
+    {
+      "table": "tarifario",
+      "column": "servicio_id",
+      "target": "servicio",
+      "target_column": "id"
+    },
+    {
+      "table": "users",
+      "column": "empresa_id",
+      "target": "empresa",
+      "target_column": "id"
+    },
+    {
+      "table": "users",
+      "column": "sucursal_id",
+      "target": "sucursales",
+      "target_column": "id"
+    }
+  ]
+}

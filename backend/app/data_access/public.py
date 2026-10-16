@@ -13,6 +13,9 @@ TEMPLATES = {
 for dimension in ('source', 'status', 'destination'):
     TEMPLATES['summary_' + dimension] = f'SELECT {dimension}, COUNT(*) AS total FROM chatbot.v_tracking WHERE registered_at >= %(start_date)s AND registered_at < %(end_date)s AND %(access_scope)s = \'global_internal\' GROUP BY {dimension} ORDER BY total DESC LIMIT %(limit)s'
 
+TEMPLATES['tracking_details'] = TEMPLATES['tracking'].replace('source, tracking_code, status, origin, destination, registered_at, updated_at', 'source, tracking_code, details').replace('chatbot.v_tracking ', 'chatbot.v_tracking_details ').replace('registered_at DESC', 'source, tracking_code')
+TEMPLATES['offices_details'] = TEMPLATES['offices'].replace('office_id, codigo_sucursal, municipality, department, phone', 'office_id, department, details').replace('chatbot.v_offices ', 'chatbot.v_office_details ').replace('department, municipality, office_id', 'department, office_id')
+
 
 class QuerySpec(StrictModel):
     template: str
@@ -40,7 +43,7 @@ def validate_query(query: QuerySpec, sql: str):
     if len(statements) != 1 or not isinstance(statements[0], exp.Select):
         raise ValueError('Solo SELECT.')
     for table in statements[0].find_all(exp.Table):
-        if table.db != 'chatbot' or table.name not in {'v_tracking', 'v_offices'}:
+        if table.db != 'chatbot' or table.name not in {'v_tracking', 'v_offices', 'v_tracking_details', 'v_office_details'}:
             raise ValueError('Fuente no autorizada.')
     if any(isinstance(node, (exp.Insert, exp.Update, exp.Delete, exp.Command, exp.Subquery, exp.Union)) for node in statements[0].walk()):
         raise ValueError('Estructura SQL no autorizada.')

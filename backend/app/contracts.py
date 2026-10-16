@@ -25,6 +25,7 @@ class IntentDecision(StrictModel):
     start_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     end_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     dimension: Literal['source', 'status', 'destination'] = 'status'
+    detail: bool = False
 
 
 class Evidence(StrictModel):

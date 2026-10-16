@@ -2,6 +2,8 @@
 
 Actualización del 16 de octubre de 2026, solicitada expresamente para utilizar los datos del respaldo. La API activa carga `.runtime/institutional-env.json`; el frontend distingue esta conexión de la demostración. El token del operador local se mantiene en `.runtime/operator-token.txt`, sin incluirlo en el repositorio ni en el navegador de forma persistente.
 
+**Ampliación autorizada posterior:** las fichas completas cuentan ahora con una proyección privada adicional con datos personales y registros asociados. Las cifras y exclusiones descritas debajo corresponden a la proyección resumida inicial. Consultar [fichas completas y permisos](full-details.md) para el alcance actual; el resumen permanece sin columnas personales.
+
 ## Procedencia y alcance
 
 Origen: respaldo PostgreSQL custom `backapsiop.sql`, 15.396.364.706 bytes. Su cabecera declara creación el **8 de octubre de 2026 a las 14:59:32**, sin zona horaria. Es una copia local estática, no una conexión de actualización continua. El archivo original y los PostgreSQL preexistentes se conservaron.
