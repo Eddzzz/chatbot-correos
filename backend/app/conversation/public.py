@@ -1,0 +1,146 @@
+import asyncio
+import time
+import re
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from uuid import uuid4
+from app.answers.public import compose_answer
+from app.contracts import AccessContext, ChatRequest, ChatResponse, IntentDecision, ServiceError
+from app.policies.public import OUTSIDE, UNAVAILABLE
+
+
+@dataclass
+class Session:
+    owner: str
+    touched: float
+    messages: list[dict] = field(default_factory=list)
+    filters: dict[str, str] = field(default_factory=dict)
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class Conversation:
+    def __init__(self, settings, model, tools, audit):
+        self.settings, self.model, self.tools, self.audit = settings, model, tools, audit
+        # ponytail: in-memory TTL sessions, one API worker; external store only when scaling.
+        self.sessions: dict[str, Session] = {}
+        self.running: dict[str, tuple[str, asyncio.Task]] = {}
+
+    def prune(self):
+        now = time.monotonic()
+        self.sessions = {key: value for key, value in self.sessions.items() if now - value.touched < self.settings.session_ttl}
+
+    def session(self, session_id: str | None, principal: AccessContext):
+        self.prune()
+        if session_id:
+            session = self.sessions.get(session_id)
+            if not session or session.owner != principal.user_id:
+                raise ServiceError('session_not_found', 'Sesión no encontrada o caducada.', 404)
+        else:
+            owned = [(key, session) for key, session in self.sessions.items() if session.owner == principal.user_id]
+            if len(owned) >= self.settings.max_sessions:
+                oldest = min(owned, key=lambda item: item[1].touched)[0]
+                del self.sessions[oldest]
+            if len(self.sessions) >= 5000:
+                raise ServiceError('sessions_full', 'Capacidad de sesiones alcanzada.', 429)
+            session_id = str(uuid4())
+            session = self.sessions[session_id] = Session(principal.user_id, time.monotonic())
+        session.touched = time.monotonic()
+        return session_id, session
+
+    def list_sessions(self, principal):
+        self.prune()
+        return {'sessions': [{'session_id': key, 'title': 'Consulta de Correos Bolivia', 'updated_at': value.updated_at} for key, value in self.sessions.items() if value.owner == principal.user_id]}
+
+    def history(self, session_id, principal):
+        _, session = self.session(session_id, principal)
+        return {'messages': session.messages}
+
+    async def handle(self, request: ChatRequest, principal: AccessContext, request_id: str, session_id: str):
+        started = time.monotonic()
+        status = 'error'
+        operation = 'greeting'
+        task = asyncio.current_task()
+        self.running[request_id] = (principal.user_id, task)
+        try:
+            if request.message.strip().lower().strip('¡!¿?. ') in {'hola', 'buenos días', 'buenas tardes', 'buenas noches', 'buenas'}:
+                answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Hola. Puedo ayudarte con seguimiento, oficinas y resúmenes de Correos Bolivia. Indica tu consulta.')
+            elif request.message.strip().lower().strip('¡!¿?. ') in {'qué consultas puedes responder', 'que consultas puedes responder', 'ayuda'}:
+                operation = 'capabilities'
+                answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Según tus permisos, puedo consultar seguimiento por código, oficinas por departamento y contar registros por estado, familia o destino para un periodo de hasta 366 días. Indica ambas fechas AAAA-MM-DD; la fecha final es exclusiva. Las tarifas no están habilitadas. Los conteos son de registros, no garantizan envíos únicos.')
+            else:
+                async with asyncio.timeout(self.settings.inference_timeout + self.settings.queue_timeout + 15):
+                    operation = 'interpretation'
+                    session = self.sessions[session_id]
+                    confirmed = dict(session.filters)
+                    followup = request.message.casefold().strip('¡!¿?. ')
+                    if confirmed.get('tracking_code') and followup in {'y su estado', 'su estado', 'el estado de ese envío', 'el estado de ese envio'}:
+                        intent = IntentDecision(operation='tracking', tracking_code=confirmed['tracking_code'])
+                    else:
+                        intent = await self.model.interpret(request.message, context=confirmed)
+                    operation = intent.operation
+                    intent = self.validate_filters(intent, request.message, confirmed)
+                    if intent.operation in self.tools.supported:
+                        result = await self.tools.execute(intent, principal)
+                        answer = compose_answer(request_id, session_id, result)
+                        session.filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code', 'start_date', 'end_date', 'department'} and value is not None}
+                    else:
+                        text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': 'Indica si necesitas seguimiento de un envío, oficinas o un resumen y sus fechas.'}[intent.operation]
+                        answer = ChatResponse(request_id=request_id, session_id=session_id, status={'outside': 'out_of_scope', 'rates': 'unsupported', 'clarify': 'needs_clarification'}[intent.operation], answer=text)
+            status = answer.status
+            session = self.sessions.get(session_id)
+            if session and session.owner == principal.user_id:
+                # No persisted prompts, tracking codes, row data, or free text in history.
+                session.messages.extend([{'role': 'user', 'content': '[Consulta operativa]', 'request_id': request_id}, {'role': 'assistant', 'content': 'Consulta completada. Los resultados operativos no se conservan en el historial.', 'request_id': request_id, 'status': status}])
+                session.messages = session.messages[-40:]
+                session.updated_at = datetime.now(timezone.utc).isoformat()
+                session.touched = time.monotonic()
+            return answer
+        except TimeoutError:
+            raise ServiceError('request_timeout', 'La consulta superó su tiempo máximo. Intenta nuevamente.') from None
+        except asyncio.CancelledError:
+            status = 'cancelled'
+            raise
+        except ServiceError as exc:
+            status = {'clarify': 'needs_clarification', 'forbidden': 'forbidden'}.get(exc.code, 'error')
+            raise
+        finally:
+            self.running.pop(request_id, None)
+            self.audit.record(request_id, status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation=operation, model_version='demo-rules-v1' if self.settings.demo_mode else self.settings.model_version)
+
+    @staticmethod
+    def validate_filters(intent, message, confirmed):
+        updates = {}
+        text = message.casefold()
+        continuation = bool(re.search(r'\b(su estado|ese envío|ese envio|mismo envío|mismo envio|ese código|ese codigo|mismo código|mismo codigo|ese periodo|ese período|mismo periodo|mismo período|esas fechas|mismas fechas)\b', text))
+        if intent.operation == 'tracking':
+            candidates = re.findall(r'\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b', message)
+            new_codes = [value for value in candidates if any(char.isdigit() for char in value) and value.casefold() != confirmed.get('tracking_code', '').casefold()]
+            may_reuse = continuation and not new_codes
+            code = intent.tracking_code or (confirmed.get('tracking_code') if may_reuse else None)
+            if code and code.casefold() not in text and not (may_reuse and code == confirmed.get('tracking_code')):
+                raise ServiceError('clarify', 'Confirma el código de seguimiento exacto; no aparece en tu consulta.', 422)
+            if new_codes and code and code.casefold() not in {value.casefold() for value in new_codes}:
+                raise ServiceError('clarify', 'Indica y confirma el nuevo código de seguimiento; no reutilizaré el anterior.', 422)
+            updates['tracking_code'] = code
+        if intent.operation == 'summary':
+            explicit_dates = re.findall(r'\b\d{4}-\d{2}-\d{2}\b', message)
+            new_period = bool(re.search(r'\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|hoy|ayer|semana|mes|año|\d{4})\b', text))
+            may_reuse = continuation and not explicit_dates and not new_period
+            for key in ('start_date', 'end_date'):
+                value = getattr(intent, key) or (confirmed.get(key) if may_reuse else None)
+                if value and value not in explicit_dates and not (may_reuse and value == confirmed.get(key)):
+                    raise ServiceError('clarify', 'Indica ambas fechas explícitas AAAA-MM-DD, incluida la fecha final exclusiva.', 422)
+                updates[key] = value
+        if intent.operation == 'offices':
+            if intent.department and intent.department.casefold() not in text:
+                raise ServiceError('clarify', 'Confirma el departamento de las oficinas que deseas consultar.', 422)
+            if not intent.department and not any(word in text for word in ('todas', 'todos', 'nacional')):
+                raise ServiceError('clarify', 'Indica el departamento para consultar oficinas, o escribe «todas las oficinas».', 422)
+        return intent.model_copy(update=updates)
+
+    def cancel(self, request_id, principal):
+        entry = self.running.get(request_id)
+        if not entry or entry[0] != principal.user_id:
+            raise ServiceError('request_not_found', 'Solicitud no encontrada.', 404)
+        entry[1].cancel()
+        return {'request_id': request_id, 'status': 'cancelled'}

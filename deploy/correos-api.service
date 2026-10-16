@@ -1,0 +1,21 @@
+[Unit]
+Description=Correos Bolivia internal chatbot API
+After=network.target
+
+[Service]
+User=correos-chat
+Group=correos-chat
+WorkingDirectory=/opt/correos-bolivia-chatbot/backend
+EnvironmentFile=/etc/correos-chat/api.env
+ExecStart=/opt/correos-bolivia-chatbot/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1 --loop asyncio --log-config /opt/correos-bolivia-chatbot/config/logging.json
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=1G
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

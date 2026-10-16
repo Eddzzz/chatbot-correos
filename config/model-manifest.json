@@ -1,0 +1,21 @@
+{
+  "model": {
+    "repository": "unsloth/Qwen3.5-2B-GGUF",
+    "revision": "f6d5376be1edb4d416d56da11e5397a961aca8ae",
+    "filename": "Qwen3.5-2B-Q4_K_M.gguf",
+    "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+    "bytes": 1280835840,
+    "license": "Apache-2.0",
+    "license_url": "https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE",
+    "purpose": "Candidato inicial. Selección final pendiente de evaluación de negocio."
+  },
+  "runtime": {
+    "repository": "ggml-org/llama.cpp",
+    "revision": "b11696",
+    "filename": "llama-b11696-bin-win-cpu-x64.zip",
+    "sha256": "1e7c47dff58467540d53e6cf302d83951bcb165afb252c2952ed3872190fc60d",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11696/llama-b11696-bin-win-cpu-x64.zip",
+    "license": "MIT",
+    "license_url": "https://github.com/ggml-org/llama.cpp/blob/b11696/LICENSE"
+  }
+}

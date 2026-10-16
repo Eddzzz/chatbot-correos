@@ -1,0 +1,19 @@
+[Unit]
+Description=Single local CPU inference server
+After=network.target
+
+[Service]
+User=correos-chat
+Group=correos-chat
+ExecStart=/opt/llama.cpp/build/bin/llama-server --model /opt/correos-bolivia-chatbot/models/Qwen3.5-2B-Q4_K_M.gguf --host 127.0.0.1 --port 8081 --n-gpu-layers 0 --no-op-offload --ctx-size 4096 --parallel 1 --threads 4 --reasoning off --jinja --no-webui --cors-origins http://127.0.0.1:8081 --no-cors-credentials
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=6G
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
