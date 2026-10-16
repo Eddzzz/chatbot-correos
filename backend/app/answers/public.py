@@ -2,7 +2,15 @@ from app.contracts import ChatResponse, Evidence
 from app.data_access.public import QueryResult
 
 def compose_answer(request_id: str, session_id: str, result: QueryResult) -> ChatResponse:
-    if not result.rows and result.truncated:
+    if result.totals is not None:
+        names={'movimientos':'movimientos','cobros':'cobros','facturacion':'registros de facturación'}
+        answer='En las fuentes consultadas encontré: '+', '.join(f'{total} {names[category]}' for category,total in result.totals.items())+'.'
+        if not result.rows:
+            answer+=' No hay registros para el periodo solicitado en estas fuentes del respaldo.'
+        answer+=' Para movimientos y cobros uso la fecha del cobro; para facturación, la fecha de registro.'
+        if 'facturacion' in result.totals:
+            answer+=' En facturación, la tabla de origen contiene únicamente identificador y fechas de registro.'
+    elif not result.rows and result.truncated:
         answer = 'La ficha supera el límite de respuesta y no fue posible mostrarla completa. Consulta los datos resumidos o acota los registros a una sucursal o un código.'
     elif not result.rows:
         answer = 'No se encontraron registros para esos filtros dentro del alcance autorizado.'

@@ -6,7 +6,7 @@ import {readEvents} from './shared/api/sse';
 import {chatIdFromPath,chatPath} from './features/chat/chatUrl';
 
 type Config = {data_mode:string;inference_mode:string;data_snapshot?:string};
-const prompts = ['¿Qué consultas puedes responder?', 'Cuenta registros por estado del 2026-01-01 al 2026-02-01', '¿Qué oficinas hay en La Paz?'];
+const prompts = ['¿Qué consultas puedes responder?', 'Cuenta registros por estado del mes pasado', '¿Qué oficinas hay en La Paz?'];
 export function App() {
   const [token, setToken] = useState('');
   const [authBusy, setAuthBusy] = useState(false);

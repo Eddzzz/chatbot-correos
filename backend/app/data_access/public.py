@@ -19,6 +19,8 @@ TEMPLATES['offices_details'] = TEMPLATES['offices'].replace('office_id, codigo_s
 TEMPLATES['offices_related_details'] = "SELECT office_id, table_name, total_count, relation_kind, path_info, descendant_count, lookup_count FROM chatbot.v_office_related_counts WHERE office_id = %(office_id)s AND %(access_scope)s = 'global_internal' ORDER BY table_name LIMIT %(limit)s"
 TEMPLATES['offices_table_details'] = TEMPLATES['offices_related_details'].replace('WHERE office_id', 'WHERE table_name = %(table_name)s AND office_id')
 TEMPLATES['offices_records_details'] = "SELECT record_key, record, relation_kind FROM chatbot.v_office_related_records WHERE office_id = %(office_id)s AND table_name = %(table_name)s AND %(access_scope)s = 'global_internal' ORDER BY record_key LIMIT %(page_limit)s OFFSET %(offset)s"
+TEMPLATES['summary_accounting_details'] = "SELECT category, record_id, occurred_at, service, active, record AS details FROM chatbot.v_accounting_records WHERE occurred_at >= %(start_date)s AND occurred_at < %(end_date)s AND category = ANY(%(categories)s) AND %(access_scope)s = 'global_internal' ORDER BY occurred_at DESC, category, record_id LIMIT %(limit)s"
+TEMPLATES['summary_accounting_counts_details'] = "SELECT category, COUNT(*) AS total FROM chatbot.v_accounting_records WHERE occurred_at >= %(start_date)s AND occurred_at < %(end_date)s AND category = ANY(%(categories)s) AND %(access_scope)s = 'global_internal' GROUP BY category ORDER BY category LIMIT %(limit)s"
 
 
 class QuerySpec(StrictModel):
@@ -32,6 +34,7 @@ class QueryResult:
     source: str
     queried_at: datetime
     truncated: bool = False
+    totals: dict[str,int] | None = None
 
 
 class ReadPort(Protocol):
@@ -47,7 +50,7 @@ def validate_query(query: QuerySpec, sql: str):
     if len(statements) != 1 or not isinstance(statements[0], exp.Select):
         raise ValueError('Solo SELECT.')
     for table in statements[0].find_all(exp.Table):
-        if table.db != 'chatbot' or table.name not in {'v_tracking', 'v_offices', 'v_tracking_details', 'v_office_details', 'v_office_related_counts', 'v_office_related_records'}:
+        if table.db != 'chatbot' or table.name not in {'v_tracking', 'v_offices', 'v_tracking_details', 'v_office_details', 'v_office_related_counts', 'v_office_related_records','v_accounting_records'}:
             raise ValueError('Fuente no autorizada.')
     if any(isinstance(node, (exp.Insert, exp.Update, exp.Delete, exp.Command, exp.Subquery, exp.Union)) for node in statements[0].walk()):
         raise ValueError('Estructura SQL no autorizada.')

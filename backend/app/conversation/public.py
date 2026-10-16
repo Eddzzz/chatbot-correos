@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from pathlib import Path
 from app.answers.public import compose_answer
+from app.analytics.public import resolve_period, is_period_followup, describe_period
 from app.contracts import AccessContext, ChatRequest, ChatResponse, IntentDecision, ServiceError
 from app.policies.public import OUTSIDE, UNAVAILABLE
 from app.data_access.public import HistoryStore
@@ -124,17 +125,29 @@ class Conversation:
         try:
             self.store.save(session_id, session)
             if request.message.strip().lower().strip('¡!¿?. ') in {'hola', 'buenos días', 'buenas tardes', 'buenas noches', 'buenas'}:
-                answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Hola. Puedo ayudarte con seguimiento, oficinas y resúmenes de Correos Bolivia. Indica tu consulta.')
+                answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Hola. Puedo ayudarte con seguimiento, oficinas, resúmenes y registros de movimientos, cobros y facturación de Correos Bolivia, según tus permisos. Indica tu consulta.')
             elif request.message.strip().lower().strip('¡!¿?. ') in {'qué consultas puedes responder', 'que consultas puedes responder', 'ayuda'}:
                 operation = 'capabilities'
-                answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Según tus permisos, puedo consultar seguimiento por código, oficinas por departamento y contar registros por estado, familia o destino para un periodo de hasta 366 días. Indica ambas fechas AAAA-MM-DD; la fecha final es exclusiva. Las tarifas no están habilitadas. Los conteos son de registros, no garantizan envíos únicos.')
+                answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Según tus permisos, puedo consultar seguimiento por código, oficinas por departamento, contar registros postales por estado, familia o destino y consultar movimientos, cobros y registros de facturación. Puedes indicar «todo octubre», «octubre de 2025», «el mes pasado» o un intervalo de hasta 366 días. Si no indicas año, usaré el actual y lo mostraré en la respuesta. Las tarifas no están habilitadas. Los conteos postales representan registros, no envíos únicos.')
             else:
                 async with asyncio.timeout(self.settings.inference_timeout + self.settings.queue_timeout + 15):
                     operation = 'interpretation'
                     session = self.sessions[session_id]
                     confirmed = dict(session.filters)
                     followup = request.message.casefold().strip('¡!¿?. ')
-                    if self.is_detail_followup(request.message):
+                    categories = self.accounting_categories(request.message)
+                    accounting_request = bool(re.search(r'\b(contab\w*|cobros?|cobranzas?|factur\w*)\b',request.message.casefold()))
+                    if not session.last_intent and is_period_followup(request.message):
+                        previous_topic=next((item['content'] for item in reversed(session.messages[:-1]) if item['role']=='user' and not is_period_followup(item['content'])), '')
+                        if re.search(r'\b(contab\w*|cobros?|cobranzas?|factur\w*)\b',previous_topic.casefold()):
+                            session.last_intent=IntentDecision(operation='accounting',accounting_categories=self.accounting_categories(previous_topic) or ['movimientos','cobros','facturacion'])
+                    if accounting_request or (categories and session.last_intent and session.last_intent.operation=='accounting'):
+                        intent = IntentDecision(operation='accounting',accounting_categories=categories or ['movimientos','cobros','facturacion'])
+                        if session.last_intent and session.last_intent.operation=='accounting' and self.is_accounting_followup(request.message):
+                            intent=session.last_intent.model_copy(update={'accounting_categories':categories or session.last_intent.accounting_categories})
+                    elif is_period_followup(request.message) and session.last_intent and session.last_intent.operation in {'summary','accounting'}:
+                        intent = session.last_intent.model_copy()
+                    elif self.is_detail_followup(request.message):
                         intent = (session.last_intent.model_copy(update={'detail': True})
                                   if session.last_intent and session.last_intent.operation in {'offices', 'tracking'}
                                   else IntentDecision(operation='clarify'))
@@ -150,14 +163,21 @@ class Conversation:
                             intent = intent.model_copy(update={'detail': True})
                     operation = intent.operation + ('_details' if intent.detail else '')
                     intent = self.validate_filters(intent, request.message, confirmed)
-                    if intent.operation in self.tools.supported:
+                    if intent.operation in {'summary','accounting'} and (not intent.start_date or not intent.end_date):
+                        session.last_intent=intent
+                        answer=ChatResponse(request_id=request_id,session_id=session_id,status='needs_clarification',answer='¿De qué mes o periodo necesitas los registros? Puedes decir «todo octubre», «octubre de 2025» o «el mes pasado».')
+                    elif intent.operation in self.tools.supported:
                         result = await self.tools.execute(intent, principal)
                         answer = compose_answer(request_id, session_id, result)
-                        session.last_intent = intent if result.rows else None
+                        session.last_intent = intent if result.rows or intent.operation in {'summary','accounting'} else None
                         session.filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code', 'start_date', 'end_date', 'department'} and value is not None}
-                        session.required_permissions.update({'internal_data', intent.operation})
-                        if intent.detail:
+                        session.required_permissions.update({'internal_data', 'summary' if intent.operation=='accounting' else intent.operation})
+                        if intent.detail or intent.operation=='accounting':
                             session.required_permissions.add('personal_data')
+                        if intent.operation in {'summary','accounting'}:
+                            answer.answer = 'Periodo consultado: '+describe_period(intent.start_date,intent.end_date)+'. '+answer.answer
+                            if self.settings.data_snapshot and intent.end_date>self.settings.data_snapshot[:10]:
+                                answer.answer += ' El respaldo disponible llega al '+self.settings.data_snapshot[:10]+'; no permite confirmar los días posteriores.'
                     else:
                         text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': self.clarification(request.message, session)}[intent.operation]
                         answer = ChatResponse(request_id=request_id, session_id=session_id, status={'outside': 'out_of_scope', 'rates': 'unsupported', 'clarify': 'needs_clarification'}[intent.operation], answer=text)
@@ -169,6 +189,12 @@ class Conversation:
             status = 'cancelled'
             raise
         except ServiceError as exc:
+            if exc.code=='period_ambiguous':
+                if 'intent' in locals():
+                    session.last_intent=intent
+                status='needs_clarification'
+                answer=ChatResponse(request_id=request_id,session_id=session_id,status=status,answer=exc.message)
+                return answer
             status = {'clarify': 'needs_clarification', 'forbidden': 'forbidden'}.get(exc.code, 'error')
             raise
         finally:
@@ -184,6 +210,16 @@ class Conversation:
                 self.active_sessions.pop(request_id, None)
                 self.running.pop(request_id, None)
                 self.audit.record(request_id, status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation=operation, model_version='demo-rules-v1' if self.settings.demo_mode else self.settings.model_version)
+
+    @staticmethod
+    def accounting_categories(message):
+        text=message.casefold()
+        return [category for category,pattern in [('movimientos',r'\bmovimientos?\b'),('cobros',r'\b(cobros?|cobranzas?)\b'),('facturacion',r'\bfactur\w*\b')] if re.search(pattern,text)]
+
+    @staticmethod
+    def is_accounting_followup(message):
+        words=set(Conversation.normalized_words(message))
+        return bool(Conversation.accounting_categories(message)) and words <= {'y','los','las','el','la','solo','solamente','movimiento','movimientos','cobro','cobros','cobranzas','facturacion','facturas','datos','de','por','favor'}
 
     @staticmethod
     def normalized_words(message):
@@ -249,11 +285,15 @@ class Conversation:
             if new_codes and code and code.casefold() not in {value.casefold() for value in new_codes}:
                 raise ServiceError('clarify', 'Indica y confirma el nuevo código de seguimiento; no reutilizaré el anterior.', 422)
             updates['tracking_code'] = code
-        if intent.operation == 'summary':
+        if intent.operation in {'summary','accounting'}:
+            period=resolve_period(message,confirmed)
             explicit_dates = re.findall(r'\b\d{4}-\d{2}-\d{2}\b', message)
             new_period = bool(re.search(r'\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|hoy|ayer|semana|mes|año|\d{4})\b', text))
-            may_reuse = continuation and not explicit_dates and not new_period
+            may_reuse = (continuation or (intent.operation=='accounting' and Conversation.is_accounting_followup(message))) and not explicit_dates and not new_period
             for key in ('start_date', 'end_date'):
+                if period:
+                    updates[key]=period[0 if key=='start_date' else 1]
+                    continue
                 value = getattr(intent, key) or (confirmed.get(key) if may_reuse else None)
                 if value and value not in explicit_dates and not (may_reuse and value == confirmed.get(key)):
                     raise ServiceError('clarify', 'Indica ambas fechas explícitas AAAA-MM-DD, incluida la fecha final exclusiva.', 422)

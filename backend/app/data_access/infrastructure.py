@@ -26,7 +26,7 @@ class PostgresReader:
         validate_query(query, sql)
         # The metadata inventory is a separate bounded contract (at most 128 tables).
         # Operational record limits do not hide tables from that inventory.
-        row_limit = 128 if query.template == 'offices_related_details' else self.settings.max_rows
+        row_limit = 128 if query.template == 'offices_related_details' else 3 if query.template == 'summary_accounting_counts_details' else self.settings.max_rows
         byte_limit = 65536 if query.template == 'offices_related_details' else self.settings.max_result_bytes
         params = {**query.parameters, 'access_scope': 'global_internal', 'limit': row_limit + 1}
         try:
@@ -50,6 +50,8 @@ class PostgresReader:
                             break
                         rows.append(row)
             source = ('DEMOSTRACIÓN · datos ficticios · ' if self.settings.fixture_data else '') + ('Directorio de sucursales' if query.template.startswith('offices') else 'Registros de seguimiento postal')
+            if query.template.startswith('summary_accounting'):
+                source = ('DEMOSTRACIÓN · datos ficticios · ' if self.settings.fixture_data else '') + 'Movimientos y cobros de cuentas por cobrar · registros de facturas'
             if self.settings.data_snapshot and not self.settings.fixture_data:
                 source += ' · respaldo local del ' + self.settings.data_snapshot
             return QueryResult(rows, source, datetime.now(timezone.utc), truncated)
@@ -77,8 +79,12 @@ class DemoReader:
             rows = [{'source': 'demo', 'tracking_code': 'DEMO123BO', 'status': 'En tránsito (ficticio)', 'origin': 'La Paz', 'destination': 'Cochabamba', 'registered_at': '2026-01-15', 'updated_at': '2026-01-16'}]
         if query.template.startswith('offices') and query.parameters.get('department') in (None, 'La Paz'):
             rows = [{'office_id': 1, 'codigo_sucursal': 'DEMO-LP', 'municipality': 'La Paz', 'department': 'La Paz', 'phone': 'Dato ficticio'}]
-        if query.template.startswith('summary_'):
+        if query.template.startswith('summary_') and not query.template.startswith('summary_accounting'):
             rows = [{query.template[8:]: 'Dato ficticio', 'total': 1}]
-        if query.template.endswith('_details'):
+        if query.template=='summary_accounting_counts_details':
+            rows = [{'category':category,'total':1} for category in query.parameters['categories']]
+        elif query.template=='summary_accounting_details':
+            rows = [{'category':category,'record_id':index,'occurred_at':str(query.parameters['start_date']),'service':'Servicio ficticio','active':True,'details':{'tabla':'demostracion','campos':{'id':index,'descripcion':'Registro ficticio'},'omitidos':[]}} for index,category in enumerate(query.parameters['categories'],1)]
+        if query.template.endswith('_details') and not query.template.startswith('summary_accounting'):
             rows = [{**{key: value for key, value in row.items() if key in {'office_id', 'department', 'source', 'tracking_code'}}, 'details': {'tabla': 'demostracion', 'campos': row, 'relaciones': {}, 'omitidos': []}} for row in rows]
         return QueryResult(rows, 'DEMOSTRACIÓN · datos ficticios', datetime.now(timezone.utc))

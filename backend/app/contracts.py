@@ -19,13 +19,14 @@ class AccessContext(StrictModel):
 
 
 class IntentDecision(StrictModel):
-    operation: Literal['tracking', 'offices', 'summary', 'rates', 'outside', 'clarify']
+    operation: Literal['tracking', 'offices', 'summary', 'accounting', 'rates', 'outside', 'clarify']
     tracking_code: str | None = Field(default=None, max_length=40, pattern=r'^[A-Za-z0-9-]+$')
     department: str | None = Field(default=None, max_length=80)
     start_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     end_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     dimension: Literal['source', 'status', 'destination'] = 'status'
     detail: bool = False
+    accounting_categories: list[Literal['movimientos','cobros','facturacion']] = Field(default_factory=lambda:['movimientos','cobros','facturacion'],min_length=1,max_length=3)
 
 
 class Evidence(StrictModel):

@@ -60,6 +60,8 @@ Ejemplos sobre **datos ficticios**:
 
 Cada conversación tiene un código y una URL `/c/{id}`. El historial conserva preguntas y respuestas al recargar y reiniciar la API. Ver [conversaciones guardadas](docs/saved-chats.md).
 
+Puedes indicar periodos como «todo octubre» o «el mes pasado». Los movimientos, cobros y registros de facturación se consultan por separado; ver [periodos y fuentes contables](docs/natural-periods-accounting.md).
+
 ## Datos institucionales
 
 Las fichas de sucursales incluyen un inventario de 65 tablas relacionadas directa e indirectamente, con conteos y registros paginados. Consultar [alcance y relaciones de sucursales](docs/office-relations.md).

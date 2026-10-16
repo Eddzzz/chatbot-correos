@@ -1,18 +1,19 @@
 from app.analytics.public import plan_analysis
+from dataclasses import replace
 from app.contracts import AccessContext, IntentDecision, ServiceError
 from app.data_access.public import QuerySpec, ReadPort
 from app.policies.public import authorize_operation, authorize_details
 
 
 class ToolRegistry:
-    supported = frozenset({'tracking', 'offices', 'summary'})
+    supported = frozenset({'tracking', 'offices', 'summary', 'accounting'})
 
     def __init__(self, reader: ReadPort):
         self.reader = reader
 
     async def execute(self, intent: IntentDecision, context: AccessContext):
-        authorize_operation(context, intent.operation)
-        if intent.detail:
+        authorize_operation(context, 'summary' if intent.operation=='accounting' else intent.operation)
+        if intent.detail or intent.operation=='accounting':
             authorize_details(context)
         if intent.operation == 'tracking':
             if not intent.tracking_code:
@@ -20,12 +21,20 @@ class ToolRegistry:
             query = QuerySpec(template='tracking', parameters={'tracking_code': intent.tracking_code.upper()})
         elif intent.operation == 'offices':
             query = QuerySpec(template='offices', parameters={'department': intent.department})
-        elif intent.operation == 'summary':
+        elif intent.operation in {'summary','accounting'}:
             query = plan_analysis(intent)
         else:
             raise ServiceError('unsupported', 'Esta operación no está disponible.', 422)
         if intent.detail and intent.operation in {'tracking', 'offices'}:
             query = query.model_copy(update={'template': query.template + '_details'})
+        if intent.operation=='accounting':
+            counts = await self.reader.run_read(QuerySpec(template='summary_accounting_counts_details',parameters=query.parameters),context)
+            if counts.truncated:
+                raise ServiceError('accounting_counts_limited','No se pudo completar el conteo de estas categorías.',503)
+            result = await self.reader.run_read(query,context)
+            totals = {category:0 for category in intent.accounting_categories}
+            totals.update({row['category']:row['total'] for row in counts.rows})
+            return replace(result,totals=totals)
         return await self.reader.run_read(query, context)
 
     async def related_tables(self, office_id: int, context: AccessContext):

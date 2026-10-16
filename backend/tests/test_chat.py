@@ -76,8 +76,8 @@ async def test_inference_queue_bound_and_cancellation():
 
 
 def test_hallucinated_filters_fail_and_followup_uses_confirmed_code():
-    with pytest.raises(ServiceError):
-        Conversation.validate_filters(IntentDecision(operation='summary', start_date='2026-03-01', end_date='2026-04-01'), 'Resumen de marzo', {})
+    month = Conversation.validate_filters(IntentDecision(operation='summary', start_date='2026-03-01', end_date='2026-04-01'), 'Resumen de marzo de 2026', {})
+    assert month.start_date=='2026-03-01' and month.end_date=='2026-04-01'
     with pytest.raises(ServiceError):
         Conversation.validate_filters(IntentDecision(operation='tracking', tracking_code='DEMO123BO'), 'Consulta un envío', {})
     with pytest.raises(ServiceError):
@@ -99,12 +99,12 @@ def test_new_tracking_and_period_never_reuse_stale_filters():
     with pytest.raises(ServiceError):
         Conversation.validate_filters(IntentDecision(operation='tracking', tracking_code='DEMO-CERTI-001'), 'Consulta otro envío', confirmed)
     period = {'start_date':'2026-01-01','end_date':'2026-02-01'}
-    with pytest.raises(ServiceError):
-        Conversation.validate_filters(IntentDecision(operation='summary', **period), 'Resumen de marzo', period)
+    changed = Conversation.validate_filters(IntentDecision(operation='summary', **period), 'Resumen de marzo de 2026', period)
+    assert changed.start_date=='2026-03-01' and changed.end_date=='2026-04-01'
     intent = Conversation.validate_filters(IntentDecision(operation='summary'), 'Cuenta por destino en ese periodo', period)
     assert intent.start_date == period['start_date'] and intent.end_date == period['end_date']
-    intent = Conversation.validate_filters(IntentDecision(operation='summary'), 'Resumen de marzo', period)
-    assert intent.start_date is None and intent.end_date is None
+    intent = Conversation.validate_filters(IntentDecision(operation='summary'), 'Resumen de marzo de 2026', period)
+    assert intent.start_date=='2026-03-01' and intent.end_date=='2026-04-01'
 
 
 def test_audit_metadata_has_no_message_or_results(caplog):
