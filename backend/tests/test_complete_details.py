@@ -12,7 +12,8 @@ from app.conversation.public import Conversation
 TOKEN = 'details-test-token-0001'
 
 
-def test_complete_followup_keeps_the_previously_confirmed_office_and_uses_detail_tool():
+@pytest.mark.parametrize('followup_message', ['dame compelto lo datos completos', 'datos compeltos', 'datos completos', 'muéstrame toda su información', 'más detalles'])
+def test_complete_followup_keeps_the_previously_confirmed_office_and_uses_detail_tool(followup_message):
     class Model:
         async def interpret(self, message, context=None):
             return IntentDecision(operation='offices', department='La Paz') if 'sucursal' in message else IntentDecision(operation='outside')
@@ -30,10 +31,40 @@ def test_complete_followup_keeps_the_previously_confirmed_office_and_uses_detail
     with TestClient(create_app(settings, reader=Reader(), model=Model())) as client:
         headers = {'Authorization': 'Bearer ' + TOKEN}
         first = client.post('/api/chat', headers=headers, json={'message': 'dame los datos e la sucursal e la paz'}).json()
-        followup = client.post('/api/chat', headers=headers, json={'message': 'dame compelto lo datos completos', 'session_id': first['session_id']})
+        followup = client.post('/api/chat', headers=headers, json={'message': followup_message, 'session_id': first['session_id']})
         assert followup.status_code == 200
         assert followup.json()['status'] == 'answer'
         assert followup.json()['rows'][0]['details']['puntoVenta'] == 7
+
+
+def test_mixed_postal_resources_ask_for_missing_filters_and_preserve_confirmed_resource():
+    class Model:
+        async def interpret(self, message, context=None):
+            return IntentDecision(operation='offices', department='La Paz') if message == 'oficinas de La Paz' else IntentDecision(operation='outside')
+    settings = Settings(demo_mode=True, identities_json=json.dumps({TOKEN: {'user_id': 'operator', 'permissions': ['internal_data', 'offices', 'personal_data'], 'scope': ['global_internal']}}))
+    with TestClient(create_app(settings, model=Model())) as client:
+        headers = {'Authorization': 'Bearer ' + TOKEN}
+        first = client.post('/api/chat', headers=headers, json={'message': 'oficinas de La Paz'}).json()
+        mixed = client.post('/api/chat', headers=headers, json={'message': 'sucursales y envios', 'session_id': first['session_id']}).json()
+        assert mixed['status'] == 'needs_clarification'
+        assert 'La Paz' in mixed['answer'] and 'código' in mixed['answer']
+        detail = client.post('/api/chat', headers=headers, json={'message': 'datos compeltos', 'session_id': first['session_id']}).json()
+        assert detail['status'] == 'answer' and detail['rows'][0]['department'] == 'La Paz'
+
+
+@pytest.mark.parametrize('message', ['sucursales y envios', 'envíos', 'sucursales'])
+def test_bare_postal_resources_are_never_rejected_as_outside(message):
+    class Model:
+        async def interpret(self, message, context=None):
+            return IntentDecision(operation='outside')
+    with TestClient(create_app(Settings(demo_mode=True, identities_json=json.dumps({TOKEN: {'user_id': 'operator'}})), model=Model())) as client:
+        result = client.post('/api/chat', headers={'Authorization': 'Bearer ' + TOKEN}, json={'message': message}).json()
+        assert result['status'] == 'needs_clarification'
+
+
+@pytest.mark.parametrize('message', ['datos compeltos de Cochabamba', 'datos compeltos de usuarios y contraseñas', 'datos completos del envío CP123456789BO'])
+def test_typo_tolerance_does_not_reuse_context_for_new_resources(message):
+    assert not Conversation.is_detail_followup(message)
 
 
 def test_details_without_context_ask_which_resource_instead_of_outside():
@@ -50,12 +81,13 @@ def test_detail_request_never_extends_to_a_new_named_resource():
     assert not Conversation.is_detail_followup('datos completos de usuarios y contraseñas')
 
 
-def test_full_details_require_an_explicit_personal_permission():
+@pytest.mark.parametrize('message', ['datos completos', 'datos compeltos'])
+def test_full_details_require_an_explicit_personal_permission(message):
     settings = Settings(demo_mode=True, identities_json=json.dumps({TOKEN: {'user_id': 'operator', 'permissions': ['internal_data', 'offices'], 'scope': ['global_internal']}}))
     with TestClient(create_app(settings)) as client:
         headers = {'Authorization': 'Bearer ' + TOKEN}
         first = client.post('/api/chat', headers=headers, json={'message': 'oficinas de La Paz'}).json()
-        response = client.post('/api/chat', headers=headers, json={'message': 'datos completos', 'session_id': first['session_id']})
+        response = client.post('/api/chat', headers=headers, json={'message': message, 'session_id': first['session_id']})
         assert response.status_code == 403
         assert response.json()['status'] == 'forbidden'
 

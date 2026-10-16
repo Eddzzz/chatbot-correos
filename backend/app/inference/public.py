@@ -21,6 +21,9 @@ detail=true cuando piden ficha completa, todos los datos, datos asociados o pers
 Para continuaciones como "dame los datos completos", usa last_operation y sus filtros
 confirmados; si no existe contexto devuelve clarify, nunca outside.
 "Último dato guardado" sin indicar tabla o recurso es clarify, no outside.
+Solicitudes postales incompletas o mixtas como "sucursales y envios" son clarify,
+nunca outside. Tolera faltas comunes como "datos compeltos": significan datos
+completos del último recurso confirmado, no una solicitud nueva fuera del dominio.
 Ejemplos de salida:
 "Dame una receta de pizza" => {"operation":"outside"}
 "Explícame fútbol de Correos Bolivia" => {"operation":"outside"}

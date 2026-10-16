@@ -8,6 +8,8 @@ Después de «dame los datos de la sucursal de La Paz», escribir «dame los dat
 
 Sin contexto, «datos completos» pide sucursal o código. «Dame el último dato guardado» pide precisar tabla/tipo; no se trata como tema ajeno ni se interpreta como un último registro global entre tablas sin relación. Una petición con otro departamento o código se interpreta por separado y no reutiliza silenciosamente el anterior.
 
+Las continuaciones toleran pequeñas erratas en palabras de presentación, como «datos compeltos», y referencias como «más detalles» o «muéstrame toda su información». No se corrigen códigos, fechas ni nombres de lugares. Una solicitud incompleta «sucursales y envíos» recibe una aclaración que conserva el departamento ya confirmado y solicita el código del envío. La aclaración no borra el último recurso confirmado; «más detalles» puede retomarlo. Estas reglas no unen envíos a sucursales por coincidencia de ciudad.
+
 La interfaz muestra campos y relaciones en secciones desplegables, con valores ausentes explícitos. Cuando una relación contiene más de 50 registros se indica `truncado=true`, con límite 50; no se afirma que la lista sea exhaustiva. Si una ficha supera el límite total de bytes, se pide reducir la información y no se informa falsamente que no hay registros.
 
 ## Cobertura

@@ -2,6 +2,7 @@ import asyncio
 import time
 import re
 import unicodedata
+from difflib import get_close_matches
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -81,6 +82,8 @@ class Conversation:
                                   else IntentDecision(operation='clarify'))
                     elif self.is_unspecified_data_request(request.message):
                         intent = IntentDecision(operation='clarify')
+                    elif self.is_bare_postal_request(request.message):
+                        intent = IntentDecision(operation='clarify')
                     elif confirmed.get('tracking_code') and followup in {'y su estado', 'su estado', 'el estado de ese envío', 'el estado de ese envio'}:
                         intent = IntentDecision(operation='tracking', tracking_code=confirmed['tracking_code'])
                     else:
@@ -95,7 +98,7 @@ class Conversation:
                         session.last_intent = intent if result.rows else None
                         session.filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code', 'start_date', 'end_date', 'department'} and value is not None}
                     else:
-                        text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': '¿De qué información necesitas los datos: una sucursal o un envío? Indica el departamento o el código. Para el último registro, especifica la tabla o el tipo de dato.'}[intent.operation]
+                        text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': self.clarification(request.message, session)}[intent.operation]
                         answer = ChatResponse(request_id=request_id, session_id=session_id, status={'outside': 'out_of_scope', 'rates': 'unsupported', 'clarify': 'needs_clarification'}[intent.operation], answer=text)
             status = answer.status
             session = self.sessions.get(session_id)
@@ -120,7 +123,37 @@ class Conversation:
 
     @staticmethod
     def normalized_words(message):
-        return re.findall(r'[a-z0-9]+', ''.join(char for char in unicodedata.normalize('NFD', message.casefold()) if not unicodedata.combining(char)))
+        words = re.findall(r'[a-z0-9]+', ''.join(char for char in unicodedata.normalize('NFD', message.casefold()) if not unicodedata.combining(char)))
+        # Correct only presentation words; never rewrite identifiers, dates or places.
+        vocabulary = ('completo', 'completos', 'completa', 'completas', 'detalles', 'informacion', 'datos')
+        return [get_close_matches(word, vocabulary, n=1, cutoff=.86)[0]
+                if len(word) >= 5 and word not in vocabulary and get_close_matches(word, vocabulary, n=1, cutoff=.86)
+                else word for word in words]
+
+    @staticmethod
+    def is_bare_postal_request(message):
+        words = set(Conversation.normalized_words(message))
+        resources = {'sucursal', 'sucursales', 'oficina', 'oficinas', 'envio', 'envios', 'paquete', 'paquetes'}
+        return bool(words & resources) and words <= resources | {'dame', 'muestra', 'muestrame', 'quiero', 'ver', 'datos', 'de', 'la', 'el', 'las', 'los', 'y', 'tambien', 'ambos', 'por', 'favor'}
+
+    @staticmethod
+    def clarification(message, session):
+        words = set(Conversation.normalized_words(message))
+        offices = bool(words & {'sucursal', 'sucursales', 'oficina', 'oficinas'})
+        shipments = bool(words & {'envio', 'envios', 'paquete', 'paquetes'})
+        previous = session.last_intent
+        if offices and shipments:
+            if previous and previous.operation == 'offices':
+                known = f' de {previous.department}' if previous.department else ' ya consultadas'
+                return f'Puedo ampliar los datos de las sucursales{known}. Para consultar un envío, indica su código de seguimiento. ¿Quieres la ficha completa de la sucursal o consultar un código? No puedo deducir los envíos de una sucursal solo por su departamento.'
+            return 'Puedo consultar ambos: indica el departamento de las sucursales y el código de seguimiento del envío. No hay una relación confirmada que permita listar los envíos de una sucursal solo por su ciudad.'
+        if Conversation.is_detail_followup(message):
+            return '¿De qué recurso necesitas la ficha completa? Indica una sucursal y su departamento, o el código de un envío.'
+        if offices:
+            return '¿De qué departamento necesitas las sucursales? También puedes pedir «todas las sucursales».'
+        if shipments:
+            return 'Indica el código de seguimiento del envío que quieres consultar.'
+        return '¿De qué información necesitas los datos: una sucursal o un envío? Indica el departamento o el código. Para el último registro, especifica la tabla o el tipo de dato.'
 
     @staticmethod
     def requests_details(message):
