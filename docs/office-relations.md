@@ -1,6 +1,6 @@
 # Datos asociados a una sucursal
 
-En la misma conversación, consultar «Dame los datos de la sucursal de Santa Cruz» y después «todos los datos». Además de la ficha, aparece información de las 65 categorías de negocio conectadas por claves foráneas declaradas en el respaldo. La interfaz usa nombres en español y frases con los conteos y el significado de la asociación, sin mostrar rutas técnicas. Incluye categorías vacías y registros consultables mediante el botón de cada categoría, «Siguiente» y «Anterior». La interfaz muestra diez registros por página. La búsqueda acepta palabras sin tildes.
+En la misma conversación, consultar «Dame los datos de la sucursal de Santa Cruz» y después «todos los datos». Además de la ficha, aparece información de las 65 categorías de negocio conectadas por claves foráneas declaradas en el respaldo. La interfaz usa nombres en español y cantidades de registros disponibles, sin mostrar relaciones ni rutas técnicas. Incluye categorías vacías y registros consultables mediante el botón de cada categoría, «Siguiente» y «Anterior». La interfaz muestra diez registros por página. La búsqueda acepta palabras sin tildes.
 
 La ampliación recorre todas las claves entrantes desde `sucursales`, pasando por los usuarios asignados y sus registros relacionados. Une todos los caminos y elimina duplicados. Después incorpora las referencias salientes necesarias, sin expandir nuevamente sus registros dependientes: una referencia a un usuario de otra sucursal no incorpora todas las operaciones de esa otra sucursal.
 

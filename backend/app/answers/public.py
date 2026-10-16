@@ -9,9 +9,9 @@ def compose_answer(request_id: str, session_id: str, result: QueryResult) -> Cha
     else:
         first = result.rows[0]
         if 'details' in first:
-            answer = f'Ficha y datos asociados: {len(result.rows)} ' + ('sucursal' if 'office_id' in first and len(result.rows) == 1 else 'sucursales' if 'office_id' in first else 'registro de seguimiento' if len(result.rows) == 1 else 'registros de seguimiento') + '. Se muestran los campos y relaciones disponibles del respaldo, incluidos datos personales autorizados. Las secciones indican si una relación está vacía o limitada. Contraseñas, tokens y archivos binarios no se incluyen.'
+            answer = f'Ficha y datos asociados: {len(result.rows)} ' + ('sucursal' if 'office_id' in first and len(result.rows) == 1 else 'sucursales' if 'office_id' in first else 'registro de seguimiento' if len(result.rows) == 1 else 'registros de seguimiento') + '. Se muestran los datos disponibles del respaldo, incluidos datos personales autorizados. Las secciones indican si hay resultados o si la lista está limitada. Contraseñas, tokens y archivos binarios no se incluyen.'
             if 'office_id' in first:
-                answer += ' Más abajo encontrarás el personal, los envíos y las demás categorías relacionadas que estén disponibles. Cada categoría explica cuántos registros tiene y permite consultar sus detalles. Algunos datos aparecen solo como referencia y no indican que la operación se haya realizado en esta sucursal.'
+                answer += ' Más abajo encontrarás las categorías disponibles para esta consulta. Cada categoría muestra cuántos registros tiene y permite consultar sus detalles.'
         elif 'tracking_code' in first:
             if len(result.rows) == 1:
                 answer = f'El registro {first["tracking_code"]} de la familia {first.get("source") or "sin dato"} figura con el estado «{first.get("status") or "sin dato"}».'

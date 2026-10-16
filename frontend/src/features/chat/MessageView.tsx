@@ -1,4 +1,4 @@
-import {categoryName,relationSentence} from './relationLanguage';
+import {categoryName} from './relationLanguage';
 import type {Message} from '../../shared/api/client';
 import {api} from '../../shared/api/client';
 import {useEffect,useState} from 'react';
@@ -37,16 +37,16 @@ function OfficeRelations({officeId,token}: {officeId:number;token:string}) {
     finally{setBusy(false);}
   }
   const available=tables.filter(table=>table.total_count>0).length;
-  return <section className="office-relations" aria-label="Información relacionada con la sucursal">
+  return <section className="office-relations" aria-label="Información de la consulta">
     <h3>Lo que sabemos de esta sucursal</h3>
-    {inventoryBusy && <p role="status">Buscando la información relacionada…</p>}
+    {inventoryBusy && <p role="status">Buscando la información…</p>}
     {inventoryError && <p role="alert">{inventoryError}</p>}
     {inventoryLimited && <p role="alert">La lista está limitada; puede haber más información disponible.</p>}
-    {!inventoryBusy && !inventoryError && <p>Encontré información en {available} de las {tables.length} categorías consultadas. A continuación te explico qué datos están relacionados con esta sucursal. Puedes abrir cada categoría para consultar sus registros completos.</p>}
+    {!inventoryBusy && !inventoryError && <p>Encontré información en {available} de las {tables.length} categorías consultadas. Abre una categoría para ver sus datos completos.</p>}
     <label>Buscar información<input value={filter} onChange={event=>setFilter(event.target.value)} placeholder="Por ejemplo: envíos, personal o vehículos"/></label>
     <div className="relation-stories" role="region" aria-label="Información por categoría">
       {tables.filter(table=>categoryName(table.table_name).toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(filter.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,''))).map(table=><section key={table.table_name} className="relation-story">
-        <h4>{categoryName(table.table_name)}</h4><p>{relationSentence(table)}</p>
+        <h4>{categoryName(table.table_name)}</h4><p>{table.total_count ? `${table.total_count.toLocaleString('es-BO')} ${table.total_count===1?'registro disponible':'registros disponibles'}.` : 'Sin datos en el respaldo consultado.'}</p>
         {table.total_count>0 && <button type="button" disabled={busy} onClick={()=>void load(table.table_name)}>Ver {categoryName(table.table_name).toLocaleLowerCase('es')}</button>}
       </section>)}
     </div>
@@ -54,7 +54,7 @@ function OfficeRelations({officeId,token}: {officeId:number;token:string}) {
     {error && <p role="alert">{error}</p>}
     {page && <section className="related-page" aria-label={`Registros de ${categoryName(selected)}`}>
       <h4>{categoryName(selected)}</h4><p>{page.rows.length ? `Te muestro los registros ${page.offset+1} al ${page.offset+page.rows.length} de un total de ${page.total_count.toLocaleString('es-BO')}` : 'No hay registros en esta página'}. Fuente: {page.source}</p>
-      {page.rows.map(row=><details key={row.record_key}><summary>Registro {row.record_key} · {row.relation_kind==='lookup'?'Información de referencia':selected==='sucursales'?'Sucursal solicitada':'Relacionado con el personal de la sucursal'}</summary>{row.relation_kind==='lookup' && <p>Este dato se menciona en la información consultada. No indica que esté asignado a esta sucursal.</p>}<DetailValue value={row.record}/></details>)}
+      {page.rows.map(row=><details key={row.record_key}><summary>Registro {row.record_key}</summary><DetailValue value={row.record}/></details>)}
       <div className="related-pagination"><button type="button" disabled={busy || previous.length===0} onClick={()=>void load(selected,previous[previous.length-1],previous.slice(0,-1))}>Anterior</button><button type="button" disabled={busy || page.next_offset===null} onClick={()=>page.next_offset!==null && void load(selected,page.next_offset,[...previous,page.offset])}>Siguiente</button></div>
     </section>}
   </section>;

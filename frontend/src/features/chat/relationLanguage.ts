@@ -8,15 +8,3 @@ const names: Record<string,string> = {
   vehicle_assignments:'Asignaciones de vehículos', vehicle_log:'Bitácora de vehículos', vehicle_log_investigation_tickets:'Casos de investigación de vehículos', vehicles:'Vehículos', ventanilla:'Ventanillas', workshop_catalogs:'Catálogos de talleres', workshop_part_changes:'Cambios de repuestos', workshops:'Talleres',
 };
 export function categoryName(name:string):string {return names[name] || name.replaceAll('_',' ');}
-export function relationSentence(table:{table_name:string;total_count:number;descendant_count:number;lookup_count:number}):string {
-  if(!table.total_count) return 'No hay información de esta categoría relacionada con la sucursal en el respaldo consultado.';
-  const count=(n:number)=>n.toLocaleString('es-BO');
-  const parts:string[]=[];
-  if(table.descendant_count) {
-    if(table.table_name==='sucursales') parts.push('Se incluye la ficha de la sucursal solicitada.');
-    else if(table.table_name==='users') parts.push(`Hay ${count(table.descendant_count)} ${table.descendant_count===1?'usuario asignado':'usuarios asignados'} a esta sucursal.`);
-    else parts.push(`Hay ${count(table.descendant_count)} ${table.descendant_count===1?'registro relacionado':'registros relacionados'} con el personal asignado a esta sucursal.`);
-  }
-  if(table.lookup_count) parts.push(`Se ${table.lookup_count===1?'incluye':'incluyen'} ${count(table.lookup_count)} ${table.lookup_count===1?'registro':'registros'} como información de referencia. Esto no significa que ${table.lookup_count===1?'pertenezca':'pertenezcan'} a esta sucursal.`);
-  return parts.join(' ');
-}
