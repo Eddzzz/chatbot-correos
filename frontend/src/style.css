@@ -18,8 +18,9 @@
 .office-relations label{display:flex;gap:8px;flex-direction:column;font-size:13px;font-weight:600;margin:14px 0}
 .office-relations input{padding:10px;border:1px solid #aabac6;border-radius:4px;max-width:420px;width:100%}
 .office-relations button{border:1px solid #aabac6;background:#fff;color:#193449;border-radius:4px;padding:7px 10px;white-space:nowrap}
-.office-relations td,.office-relations th{vertical-align:top}
-.office-relations td details{font-size:12px;max-width:360px;overflow-wrap:anywhere;white-space:normal}
+.relation-story{padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.relation-story h4{font-size:14px;margin:0 0 6px}
+.relation-story p{margin:0 0 10px}
 .related-page{margin-top:20px;padding:16px;border:1px solid #dce4e9;border-radius:6px}
 .related-page>details{margin:8px 0;padding:8px;border-bottom:1px solid #dce4e9}
 .related-page summary{cursor:pointer}

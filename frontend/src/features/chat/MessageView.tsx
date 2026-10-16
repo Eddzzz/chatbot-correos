@@ -1,3 +1,4 @@
+import {categoryName,relationSentence} from './relationLanguage';
 import type {Message} from '../../shared/api/client';
 import {api} from '../../shared/api/client';
 import {useEffect,useState} from 'react';
@@ -7,7 +8,7 @@ const detailLabels: Record<string,string> = {...columnNames,tabla:'Tabla de orig
 function DetailValue({value,depth=0}: {value:unknown;depth?:number}) {
   if(value == null) return <span className="detail-empty">Sin dato</span>;
   if(Array.isArray(value)) return value.length ? <div className="detail-records">{value.map((item,index)=><div key={index}>{typeof item === 'object' && item !== null ? <details open={depth<2}><summary>Registro {index+1}</summary><DetailValue value={item} depth={depth+1}/></details> : <DetailValue value={item} depth={depth+1}/>}</div>)}</div> : <span className="detail-empty">Sin registros asociados</span>;
-  if(typeof value === 'object') return <dl className="detail-fields">{Object.entries(value).map(([key,item])=><div key={key}><dt>{detailLabels[key] || key.replaceAll('_',' ')}</dt><dd>{typeof item === 'object' && item !== null ? <details open={depth<1}><summary>{Array.isArray(item) ? `${item.length} elementos` : 'Ver datos'}</summary><DetailValue value={item} depth={depth+1}/></details> : <DetailValue value={item} depth={depth+1}/>}</dd></div>)}</dl>;
+  if(typeof value === 'object') return <dl className="detail-fields">{Object.entries(value).map(([key,item])=><div key={key}><dt>{detailLabels[key] || key.replaceAll('_',' ')}</dt><dd>{typeof item === 'object' && item !== null ? <details open={depth<1}><summary>{Array.isArray(item) ? `${item.length} elementos` : 'Ver datos'}</summary><DetailValue value={item} depth={depth+1}/></details> : <DetailValue value={key==='tabla' && typeof item==='string' ? categoryName(item) : item} depth={depth+1}/>}</dd></div>)}</dl>;
   return <span>{typeof value === 'boolean' ? (value ? 'Sí' : 'No') : String(value)}</span>;
 }
 type RelatedTable = {table_name:string;total_count:number;relation_kind:string;path_info:unknown;descendant_count:number;lookup_count:number};
@@ -35,7 +36,29 @@ function OfficeRelations({officeId,token}: {officeId:number;token:string}) {
     catch(error){setError(error instanceof Error ? error.message : 'No se pudieron cargar los registros asociados.');}
     finally{setBusy(false);}
   }
-  return <section className="office-relations" aria-label="Todas las tablas asociadas"><h3>Tablas asociadas a esta sucursal</h3>{inventoryBusy && <p role="status">Cargando inventario de relaciones…</p>}{inventoryError && <p role="alert">{inventoryError}</p>}{inventoryLimited && <p role="alert">El inventario está limitado; no se muestran todas las tablas.</p>}<p>{tables.length} tablas del catálogo conectado. Los vínculos indican asociación por claves del respaldo; una referencia compartida no implica que sus operaciones pertenezcan a esta sucursal.</p><p>Contraseñas, tokens, registros de acceso y adjuntos binarios quedan excluidos. Las tablas sin filas asociadas también aparecen.</p><label>Buscar tabla<input value={filter} onChange={event=>setFilter(event.target.value)} placeholder="Por ejemplo: paquetes, eventos o usuarios"/></label><div className="table-scroll" role="region" aria-label="Inventario de tablas asociadas" tabIndex={0}><table><thead><tr><th scope="col">Tabla</th><th scope="col">Registros vinculados</th><th scope="col">Vínculo</th><th scope="col">Consulta</th></tr></thead><tbody>{tables.filter(table=>table.table_name.toLowerCase().includes(filter.toLowerCase()) || (filter.toLowerCase().includes('usuario') && table.table_name==='users')).map(table=><tr key={table.table_name}><th scope="row">{table.table_name}</th><td>{table.total_count}<br/><small>{table.table_name==='sucursales'?'Sucursal solicitada':'Por usuarios asignados'}: {table.descendant_count}<br/>Referencias: {table.lookup_count}</small></td><td>{table.descendant_count>0 && table.lookup_count>0 ? 'Asociaciones y referencias' : table.table_name==='sucursales' ? 'Sucursal y referencias relacionadas' : table.relation_kind === 'descendant' ? 'Mediante usuarios asignados' : 'Referencia asociada'}<details><summary>Ver relación</summary><DetailValue value={table.path_info}/></details></td><td><button type="button" disabled={busy || table.total_count===0} onClick={()=>void load(table.table_name)}>{table.total_count ? 'Ver registros' : 'Sin registros'}</button></td></tr>)}</tbody></table></div>{busy && <p role="status">Cargando registros de {selected}…</p>}{error && <p role="alert">{error}</p>}{page && <section className="related-page" aria-label={`Registros de ${selected}`}><h4>{selected}</h4><p>{page.rows.length ? `${page.offset+1}–${page.offset+page.rows.length} de ${page.total_count}` : 'Sin registros en esta página'}. Fuente: {page.source}</p>{page.rows.map(row=><details key={row.record_key}><summary>Registro {row.record_key} · {row.relation_kind==='lookup'?'Referencia asociada':selected==='sucursales'?'Sucursal solicitada':'Vínculo mediante usuarios asignados'}</summary>{row.relation_kind==='lookup' && <p>Esta fila es una referencia asociada; no implica que pertenezca o esté asignada a la sucursal solicitada.</p>}<DetailValue value={row.record}/></details>)}<div className="related-pagination"><button type="button" disabled={busy || previous.length===0} onClick={()=>void load(selected,previous[previous.length-1],previous.slice(0,-1))}>Anterior</button><button type="button" disabled={busy || page.next_offset===null} onClick={()=>page.next_offset!==null && void load(selected,page.next_offset,[...previous,page.offset])}>Siguiente</button></div></section>}</section>;
+  const available=tables.filter(table=>table.total_count>0).length;
+  return <section className="office-relations" aria-label="Información relacionada con la sucursal">
+    <h3>Lo que sabemos de esta sucursal</h3>
+    {inventoryBusy && <p role="status">Buscando la información relacionada…</p>}
+    {inventoryError && <p role="alert">{inventoryError}</p>}
+    {inventoryLimited && <p role="alert">La lista está limitada; puede haber más información disponible.</p>}
+    {!inventoryBusy && !inventoryError && <p>Encontré información en {available} de las {tables.length} categorías consultadas. A continuación te explico qué datos están relacionados con esta sucursal. Puedes abrir cada categoría para consultar sus registros completos.</p>}
+    <label>Buscar información<input value={filter} onChange={event=>setFilter(event.target.value)} placeholder="Por ejemplo: envíos, personal o vehículos"/></label>
+    <div className="relation-stories" role="region" aria-label="Información por categoría">
+      {tables.filter(table=>categoryName(table.table_name).toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(filter.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,''))).map(table=><section key={table.table_name} className="relation-story">
+        <h4>{categoryName(table.table_name)}</h4><p>{relationSentence(table)}</p>
+        {table.total_count>0 && <button type="button" disabled={busy} onClick={()=>void load(table.table_name)}>Ver {categoryName(table.table_name).toLocaleLowerCase('es')}</button>}
+      </section>)}
+    </div>
+    {busy && <p role="status">Consultando {categoryName(selected).toLocaleLowerCase('es')}…</p>}
+    {error && <p role="alert">{error}</p>}
+    {page && <section className="related-page" aria-label={`Registros de ${categoryName(selected)}`}>
+      <h4>{categoryName(selected)}</h4><p>{page.rows.length ? `Te muestro los registros ${page.offset+1} al ${page.offset+page.rows.length} de un total de ${page.total_count.toLocaleString('es-BO')}` : 'No hay registros en esta página'}. Fuente: {page.source}</p>
+      {page.rows.map(row=><details key={row.record_key}><summary>Registro {row.record_key} · {row.relation_kind==='lookup'?'Información de referencia':selected==='sucursales'?'Sucursal solicitada':'Relacionado con el personal de la sucursal'}</summary>{row.relation_kind==='lookup' && <p>Este dato se menciona en la información consultada. No indica que esté asignado a esta sucursal.</p>}<DetailValue value={row.record}/></details>)}
+      <div className="related-pagination"><button type="button" disabled={busy || previous.length===0} onClick={()=>void load(selected,previous[previous.length-1],previous.slice(0,-1))}>Anterior</button><button type="button" disabled={busy || page.next_offset===null} onClick={()=>page.next_offset!==null && void load(selected,page.next_offset,[...previous,page.offset])}>Siguiente</button></div>
+    </section>}
+  </section>;
+
 }
 export function MessageView({message,token}: {message:Message;token:string}) {
   const columns = message.columns?.length ? message.columns : Object.keys(message.rows?.[0] || {});
