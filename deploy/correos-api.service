@@ -7,6 +7,8 @@ User=correos-chat
 Group=correos-chat
 WorkingDirectory=/opt/correos-bolivia-chatbot/backend
 EnvironmentFile=/etc/correos-chat/api.env
+StateDirectory=correos-chat
+Environment=CHATBOT_HISTORY_PATH=/var/lib/correos-chat/chat-history.sqlite3
 ExecStart=/opt/correos-bolivia-chatbot/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1 --loop asyncio --log-config /opt/correos-bolivia-chatbot/config/logging.json
 Restart=on-failure
 RestartSec=5

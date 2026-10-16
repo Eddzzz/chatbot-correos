@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     queue_size: int = Field(default=4, ge=0, le=32)
     session_ttl: int = Field(default=1800, ge=60, le=86400)
     max_sessions: int = Field(default=100, ge=1, le=1000)
+    history_path: str = ''
     statement_timeout_ms: int = Field(default=3000, ge=100, le=10000)
     max_rows: int = Field(default=100, ge=1, le=500)
     max_result_bytes: int = Field(default=65536, ge=1024, le=262144)

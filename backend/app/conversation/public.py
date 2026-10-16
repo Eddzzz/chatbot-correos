@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import re
 import unicodedata
@@ -6,9 +7,11 @@ from difflib import get_close_matches
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
+from pathlib import Path
 from app.answers.public import compose_answer
 from app.contracts import AccessContext, ChatRequest, ChatResponse, IntentDecision, ServiceError
 from app.policies.public import OUTSIDE, UNAVAILABLE
+from app.data_access.public import HistoryStore
 
 
 @dataclass
@@ -19,40 +22,59 @@ class Session:
     filters: dict[str, str] = field(default_factory=dict)
     last_intent: IntentDecision | None = None
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    title: str = 'Nueva conversación'
+    required_permissions: set[str] = field(default_factory=set)
+    scope: tuple[str, ...] = ()
 
 
 class Conversation:
     def __init__(self, settings, model, tools, audit):
         self.settings, self.model, self.tools, self.audit = settings, model, tools, audit
-        # ponytail: in-memory TTL sessions, one API worker; external store only when scaling.
+        filename = 'chat-history-fixture.sqlite3' if settings.fixture_data or settings.demo_mode else 'chat-history.sqlite3'
+        history_path = settings.history_path or str(Path(__file__).resolve().parents[3] / '.runtime' / filename)
+        self.store = HistoryStore(history_path)
+        # TTL applies only to the context cache; saved chats remain on disk.
         self.sessions: dict[str, Session] = {}
         self.running: dict[str, tuple[str, asyncio.Task]] = {}
+        self.active_sessions: dict[str, tuple[str, asyncio.Task]] = {}
 
     def prune(self):
         now = time.monotonic()
-        self.sessions = {key: value for key, value in self.sessions.items() if now - value.touched < self.settings.session_ttl}
+        active = {session_id for session_id, _ in self.active_sessions.values()}
+        self.sessions = {key: value for key, value in self.sessions.items() if key in active or now - value.touched < self.settings.session_ttl}
 
     def session(self, session_id: str | None, principal: AccessContext):
         self.prune()
         if session_id:
             session = self.sessions.get(session_id)
+            if not session:
+                row = self.store.load(session_id, principal.user_id)
+                if row:
+                    payload = json.loads(row['payload'])
+                    session = Session(owner=row['owner'], touched=time.monotonic(),
+                        messages=payload['messages'], filters=payload['filters'],
+                        last_intent=IntentDecision.model_validate(payload['last_intent']) if payload['last_intent'] else None,
+                        updated_at=row['updated_at'], title=row['title'],
+                        required_permissions=set(json.loads(row['permissions'])), scope=tuple(json.loads(row['scope'])))
+                    self.sessions[session_id] = session
             if not session or session.owner != principal.user_id:
-                raise ServiceError('session_not_found', 'Sesión no encontrada o caducada.', 404)
+                raise ServiceError('session_not_found', 'Conversación no encontrada.', 404)
+            if not session.required_permissions <= principal.permissions or session.scope != principal.scope:
+                raise ServiceError('forbidden', 'Tus permisos actuales no permiten abrir esta conversación.', 403)
         else:
-            owned = [(key, session) for key, session in self.sessions.items() if session.owner == principal.user_id]
-            if len(owned) >= self.settings.max_sessions:
-                oldest = min(owned, key=lambda item: item[1].touched)[0]
-                del self.sessions[oldest]
+            if self.store.count(principal.user_id) >= self.settings.max_sessions:
+                raise ServiceError('sessions_full', 'Alcanzaste el límite de conversaciones guardadas. Puedes continuar una existente.', 429)
             if len(self.sessions) >= 5000:
                 raise ServiceError('sessions_full', 'Capacidad de sesiones alcanzada.', 429)
             session_id = str(uuid4())
-            session = self.sessions[session_id] = Session(principal.user_id, time.monotonic())
+            session = self.sessions[session_id] = Session(principal.user_id, time.monotonic(), scope=principal.scope)
+            self.store.save(session_id, session)
         session.touched = time.monotonic()
         return session_id, session
 
     def list_sessions(self, principal):
         self.prune()
-        return {'sessions': [{'session_id': key, 'title': 'Consulta de Correos Bolivia', 'updated_at': value.updated_at} for key, value in self.sessions.items() if value.owner == principal.user_id]}
+        return {'sessions': self.store.list(principal)}
 
     def history(self, session_id, principal):
         _, session = self.session(session_id, principal)
@@ -89,8 +111,18 @@ class Conversation:
         status = 'error'
         operation = 'greeting'
         task = asyncio.current_task()
+        session = self.sessions[session_id]
+        if any(active_id == session_id for active_id, _ in self.active_sessions.values()):
+            raise ServiceError('session_busy', 'Esta conversación ya está respondiendo una consulta.', 409)
+        self.active_sessions[request_id] = (session_id, task)
         self.running[request_id] = (principal.user_id, task)
+        answer = None
+        session.messages.append({'role': 'user', 'content': request.message, 'request_id': request_id})
+        if session.title == 'Nueva conversación':
+            session.title = ' '.join(request.message.split())[:80]
+        session.updated_at = datetime.now(timezone.utc).isoformat()
         try:
+            self.store.save(session_id, session)
             if request.message.strip().lower().strip('¡!¿?. ') in {'hola', 'buenos días', 'buenas tardes', 'buenas noches', 'buenas'}:
                 answer = ChatResponse(request_id=request_id, session_id=session_id, status='answer', answer='Hola. Puedo ayudarte con seguimiento, oficinas y resúmenes de Correos Bolivia. Indica tu consulta.')
             elif request.message.strip().lower().strip('¡!¿?. ') in {'qué consultas puedes responder', 'que consultas puedes responder', 'ayuda'}:
@@ -123,17 +155,13 @@ class Conversation:
                         answer = compose_answer(request_id, session_id, result)
                         session.last_intent = intent if result.rows else None
                         session.filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code', 'start_date', 'end_date', 'department'} and value is not None}
+                        session.required_permissions.update({'internal_data', intent.operation})
+                        if intent.detail:
+                            session.required_permissions.add('personal_data')
                     else:
                         text = {'outside': OUTSIDE, 'rates': UNAVAILABLE, 'clarify': self.clarification(request.message, session)}[intent.operation]
                         answer = ChatResponse(request_id=request_id, session_id=session_id, status={'outside': 'out_of_scope', 'rates': 'unsupported', 'clarify': 'needs_clarification'}[intent.operation], answer=text)
             status = answer.status
-            session = self.sessions.get(session_id)
-            if session and session.owner == principal.user_id:
-                # No persisted prompts, tracking codes, row data, or free text in history.
-                session.messages.extend([{'role': 'user', 'content': '[Consulta operativa]', 'request_id': request_id}, {'role': 'assistant', 'content': 'Consulta completada. Los resultados operativos no se conservan en el historial.', 'request_id': request_id, 'status': status}])
-                session.messages = session.messages[-40:]
-                session.updated_at = datetime.now(timezone.utc).isoformat()
-                session.touched = time.monotonic()
             return answer
         except TimeoutError:
             raise ServiceError('request_timeout', 'La consulta superó su tiempo máximo. Intenta nuevamente.') from None
@@ -144,8 +172,18 @@ class Conversation:
             status = {'clarify': 'needs_clarification', 'forbidden': 'forbidden'}.get(exc.code, 'error')
             raise
         finally:
-            self.running.pop(request_id, None)
-            self.audit.record(request_id, status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation=operation, model_version='demo-rules-v1' if self.settings.demo_mode else self.settings.model_version)
+            if answer:
+                session.messages.append({**answer.model_dump(mode='json'), 'role': 'assistant', 'content': answer.answer})
+            else:
+                session.messages.append({'role': 'assistant', 'content': 'Consulta detenida.' if status == 'cancelled' else 'No se pudo completar la consulta. Puedes intentarlo nuevamente.', 'request_id': request_id, 'status': 'error'})
+            session.updated_at = datetime.now(timezone.utc).isoformat()
+            session.touched = time.monotonic()
+            try:
+                self.store.save(session_id, session)
+            finally:
+                self.active_sessions.pop(request_id, None)
+                self.running.pop(request_id, None)
+                self.audit.record(request_id, status, int((time.monotonic() - started) * 1000), user_id=principal.user_id, operation=operation, model_version='demo-rules-v1' if self.settings.demo_mode else self.settings.model_version)
 
     @staticmethod
     def normalized_words(message):

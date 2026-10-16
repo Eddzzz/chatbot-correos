@@ -31,7 +31,8 @@ def test_tracking_evidence_and_sse():
         assert result['rows'][0]['tracking_code'] == 'DEMO123BO'
         assert result['evidence'][0]['row_count'] == 1
         history = client.get('/api/sessions/' + result['session_id'], headers={'Authorization': 'Bearer ' + TOKEN}).json()
-        assert 'DEMO123BO' not in json.dumps(history)
+        assert history['messages'][0]['content'] == 'seguimiento DEMO123BO'
+        assert history['messages'][1]['rows'] == result['rows']
         stream = client.post('/api/chat/stream', headers={'Authorization': 'Bearer ' + TOKEN}, json={'message': 'hola'}).text
         events = [json.loads(line[6:]) for line in stream.splitlines() if line.startswith('data: ')]
         assert len({event['request_id'] for event in events}) == 1

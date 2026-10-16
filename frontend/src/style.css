@@ -25,3 +25,7 @@
 .related-page>details{margin:8px 0;padding:8px;border-bottom:1px solid #dce4e9}
 .related-page summary{cursor:pointer}
 .related-pagination{display:flex;justify-content:space-between;margin-top:16px;gap:12px}
+.sidebar a.session{text-decoration:none}
+.sidebar a.session[aria-disabled="true"]{opacity:.5;cursor:default}
+.chat-code{margin:4px 0 0;color:var(--muted);font-size:10px;overflow-wrap:anywhere;letter-spacing:0}
+.chat-code code{font-family:inherit}

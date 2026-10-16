@@ -41,7 +41,8 @@ def main():
                 history = urllib.request.Request(f'http://127.0.0.1:8000/api/sessions/{session}', headers={'Authorization': 'Bearer ' + token})
                 with urllib.request.urlopen(history, timeout=5) as response:
                     stored = json.load(response)
-                passed = passed and 'details' not in str(stored) and code not in str(stored)
+                last_answer = stored['messages'][-1]
+                passed = passed and last_answer.get('rows') == rows and last_answer['content'] == body['answer']
         result = {'case': name, 'status': body.get('status', 'unknown'), 'passed': bool(passed)}
         results.append(result)
         print(json.dumps(result), flush=True)

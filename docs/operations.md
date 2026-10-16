@@ -29,9 +29,9 @@ Liveness `/health` no acredita dependencias. `/api/health` y `/api/metrics` requ
 
 ## Mantenimiento, recuperación y reversión
 
-- Mantener un worker API y una instancia de inferencia. Cola y sesiones viven en memoria; reiniciar invalida sesiones, y el usuario debe repetir consultas.
+- Mantener un worker API y una instancia de inferencia. La cola y las solicitudes en curso viven en memoria. El historial SQLite sobrevive al reinicio; ver [conversaciones guardadas](saved-chats.md).
 - Medir RAM y p50/p95 con carga 1/2/5, además de tokens/s. El límite de systemd es un presupuesto inicial, no consumo medido ni garantía de ausencia de swap.
-- Conservar copias de manifiestos, configuración y políticas con secretos protegidos. Historial es efímero. Definir retención y controles de acceso de los logs en la infraestructura institucional.
+- Conservar copias de manifiestos, configuración y políticas con secretos protegidos. Respaldar también el historial SQLite privado con la API detenida. Definir retención y controles de acceso de los logs en la infraestructura institucional.
 - Para revertir, detener API, restaurar el checkout/versiones anteriores y su lockfile, reconstruir frontend y reiniciar. Las vistas deben mantener compatibilidad o restaurar su definición previa mediante DBA. No borrar tablas del sistema postal.
 - Para detener la prueba, cerrar frontend/API/modelo y ejecutar `pg_ctl -D <raíz>/.runtime/postgres-fixture -m fast stop`. No borrar recursivamente el directorio de un cluster activo.
 - Volver a evaluar tras cambios de modelo, prompt, esquema, permisos o catálogo. Probar caída/reinicio y recuperación antes de declarar el piloto apto para producción.

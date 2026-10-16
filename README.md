@@ -58,6 +58,8 @@ Ejemplos sobre **datos ficticios**:
 - «Lista las oficinas de La Paz».
 - «Cuenta registros por estado desde 2026-01-01 hasta 2027-01-01, fecha final exclusiva».
 
+Cada conversación tiene un código y una URL `/c/{id}`. El historial conserva preguntas y respuestas al recargar y reiniciar la API. Ver [conversaciones guardadas](docs/saved-chats.md).
+
 ## Datos institucionales
 
 Las fichas de sucursales incluyen un inventario de 65 tablas relacionadas directa e indirectamente, con conteos y registros paginados. Consultar [alcance y relaciones de sucursales](docs/office-relations.md).

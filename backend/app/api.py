@@ -1,7 +1,7 @@
 import asyncio
 import json
 from uuid import uuid4
-from fastapi import FastAPI, Header, Request, Path, Query
+from fastapi import FastAPI, Header, Request, Response, Path, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.contracts import ChatRequest, ServiceError
 
@@ -41,7 +41,8 @@ def register_routes(app: FastAPI, settings, identity, conversation, audit):
         return {'requests': dict(audit.counts)}
 
     @app.get('/api/sessions')
-    async def sessions(authorization: str | None = Header(default=None)):
+    async def sessions(response: Response, authorization: str | None = Header(default=None)):
+        response.headers['Cache-Control'] = 'no-store'
         return conversation.list_sessions(principal(authorization))
 
     @app.get('/api/offices/{office_id}/relations')
@@ -54,7 +55,8 @@ def register_routes(app: FastAPI, settings, identity, conversation, audit):
 
     @app.get('/api/sessions/{session_id}')
     @app.get('/api/sessions/{session_id}/history')
-    async def history(session_id: str, authorization: str | None = Header(default=None)):
+    async def history(session_id: str, response: Response, authorization: str | None = Header(default=None)):
+        response.headers['Cache-Control'] = 'no-store'
         return conversation.history(session_id, principal(authorization))
 
     @app.post('/api/requests/{request_id}/cancel')

@@ -4,7 +4,7 @@ El usuario autorizó expresamente incluir tanto datos institucionales como perso
 
 ## Comportamiento
 
-Después de «dame los datos de la sucursal de La Paz», escribir «dame los datos completos» reutiliza la sucursal confirmada. También se reconoce el ejemplo «dame compelto lo datos completos». Después de consultar un código, la misma continuación amplía la ficha del envío. Se conserva solo la intención y sus filtros; se vuelven a consultar datos y permisos. No se retienen fichas personales en el historial ni se envían sus resultados al modelo.
+Después de «dame los datos de la sucursal de La Paz», escribir «dame los datos completos» reutiliza la sucursal confirmada. También se reconoce el ejemplo «dame compelto lo datos completos». Después de consultar un código, la misma continuación amplía la ficha del envío. Se conserva solo la intención y sus filtros; se vuelven a consultar datos y permisos. Las fichas personales se conservan en el historial privado solicitado por el usuario, con permisos vigentes al abrirlo; sus resultados no se envían al modelo. Ver [conversaciones guardadas](saved-chats.md).
 
 Sin contexto, «datos completos» pide sucursal o código. «Dame el último dato guardado» pide precisar tabla/tipo; no se trata como tema ajeno ni se interpreta como un último registro global entre tablas sin relación. Una petición con otro departamento o código se interpreta por separado y no reutiliza silenciosamente el anterior.
 
@@ -32,6 +32,6 @@ Después de aplicar esta actualización, reiniciar backend y recargar el navegad
 
 ## Verificación de esta actualización
 
-31 pruebas backend, 6 pruebas de scripts y 2 pruebas SSE aprobadas; build frontend aprobado. `python scripts/check_details.py` verificó seis conversaciones de extremo a extremo con datos reales y modelo CPU: petición ambigua del último dato, sucursal con errores de escritura, ficha completa con el texto exacto del usuario, repetición de detalles asociados, seguimiento y ficha completa del envío. También comprobó que el historial no conserve las fichas ni el código.
+31 pruebas backend, 6 pruebas de scripts y 2 pruebas SSE aprobadas; build frontend aprobado. `python scripts/check_details.py` verificó seis conversaciones de extremo a extremo con datos reales y modelo CPU: petición ambigua del último dato, sucursal con errores de escritura, ficha completa con el texto exacto del usuario, repetición de detalles asociados, seguimiento y ficha completa del envío. La comprobación actual del historial verifica que conserve la respuesta y sus filas autorizadas.
 
 PostgreSQL verificó ambas condiciones de contexto, ausencia de privilegios directos sobre `chatbot_details_source`, ocho campos por oficina, igualdad de conteos de las cinco familias y ausencia recursiva de credenciales/adjuntos en los JSON de muestra. En el navegador se verificaron los campos adicionales y secciones asociadas, continuación de sucursal, anchos 320/768/1440, token solo en memoria y cero errores JavaScript. Las pruebas imprimen solo estados/contadores; no generan capturas de datos personales. Los informes locales `.runtime/details-import.json`, `details-validation.json` y `details-api-validation.json` no incluyen fichas personales.
