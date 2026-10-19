@@ -65,6 +65,11 @@ def register_routes(app: FastAPI, settings, identity, conversation, audit):
         response.headers['Cache-Control'] = 'no-store'
         return conversation.history(session_id, principal(authorization))
 
+    @app.delete('/api/sessions/{session_id}')
+    async def delete_session(session_id: str, response: Response, authorization: str | None = Header(default=None)):
+        response.headers['Cache-Control'] = 'no-store'
+        return conversation.delete_session(session_id, principal(authorization))
+
     @app.post('/api/requests/{request_id}/cancel')
     async def cancel(request_id: str, authorization: str | None = Header(default=None)):
         return conversation.cancel(request_id, principal(authorization))

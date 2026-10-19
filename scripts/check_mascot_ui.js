@@ -32,7 +32,7 @@ async (page) => {
       await video.evaluate(el => { el.currentTime = el.duration - .1; });
       await page.waitForFunction(() => document.querySelector('.thinking-frames video')?.currentTime < 1, null, {timeout:3000});
     }
-    check((await mascot.locator('strong').innerText()).trim() === 'Construyendo tu respuesta', 'Missing loading caption');
+    check((await mascot.innerText()).trim() === '', 'Loader must show only the character');
     for (const theme of ['light','dark']) {
       await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
       for (const width of [320,390,768,1440]) {

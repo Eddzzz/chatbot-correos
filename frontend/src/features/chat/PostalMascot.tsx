@@ -15,15 +15,11 @@ export function PostalMascot() {
     preference.addEventListener('change',update);
     return ()=>preference.removeEventListener('change',update);
   },[]);
-  return <div className="postal-thinking" role="status" aria-live="polite">
+  return <div className="postal-thinking" role="status" aria-live="polite" aria-label="Preparando la respuesta">
     <div className="thinking-frames" aria-hidden="true">
       <video ref={video} src="/cartero-thinking-v2-24fps.webm" autoPlay loop muted playsInline
         onPlaying={event=>{event.currentTarget.dataset.playing='true';}}
         onError={event=>{delete event.currentTarget.dataset.playing;}}/>
-    </div>
-    <div className="thinking-copy">
-      <strong>Construyendo tu respuesta</strong>
-      <span>Estoy pensando en tu consulta<span className="thinking-dots" aria-hidden="true"><i/><i/><i/></span></span>
     </div>
   </div>;
 }

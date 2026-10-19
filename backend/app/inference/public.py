@@ -18,10 +18,15 @@ códigos ni departamentos. No extraigas departamentos de partes de un código.
 El departamento de oficinas es el mencionado en el mensaje (por ejemplo La Paz).
 El personal, empleados, funcionarios o usuarios de una sucursal son offices,
 nunca outside: usa detail=true y office_personnel=true para listar su personal.
+Para «último personal registrado» usa además latest_personnel=true: se compara
+la fecha de registro, nunca el ID. «Y el último registrado» conserva el contexto de personal.
 Si last_office_personnel=true, una continuación como «ahora los de Santa Cruz»
 conserva offices, detail=true y office_personnel=true; solo cambia el departamento.
 Una petición explícita de oficinas o de otro recurso puede cambiar el tema.
-Dimensiones analíticas: estado=status, familia/tipo=source, destino=destination.
+Dimensiones analíticas: estado=status, familia/tipo=source, destino=destination,
+departamento=department, oficina/sucursal=office. Los desgloses de carga por
+oficina o departamento son summary y conservan el periodo ante una continuación;
+no son solicitudes del directorio de oficinas.
 family filtra la familia postal: EMS=ems, certificados=certi, ordinarios=ordi,
 contratos=contrato, internacionales=int. Usa null si no se menciona ninguna.
 «De EMS» después de un resumen conserva el periodo y filtra EMS, nunca outside.

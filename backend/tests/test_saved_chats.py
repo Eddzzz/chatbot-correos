@@ -7,6 +7,30 @@ TOKEN = 'saved-chat-token-00001'
 OTHER = 'other-chat-token-00001'
 
 
+def test_delete_chat_checks_owner_busy_state_and_persists_after_restart(tmp_path):
+    settings = config(tmp_path / 'chats.sqlite3').model_copy(update={'max_sessions': 1})
+    headers = {'Authorization': 'Bearer ' + TOKEN}
+    app = create_app(settings)
+    with TestClient(app) as client:
+        chat_id = client.post('/api/chat', headers=headers, json={'message': 'hola'}).json()['session_id']
+        url = '/api/sessions/' + chat_id
+        assert client.delete(url).status_code == 401
+        assert client.delete(url, headers={'Authorization': 'Bearer ' + OTHER}).status_code == 404
+        app.state.conversation.active_sessions['test-active'] = (chat_id, None)
+        assert client.delete(url, headers=headers).status_code == 409
+        app.state.conversation.active_sessions.clear()
+        assert client.get(url, headers=headers).status_code == 200
+        assert client.delete(url, headers=headers).json() == {'deleted': True}
+        assert chat_id not in app.state.conversation.sessions
+        assert client.get(url, headers=headers).status_code == 404
+        assert client.get('/api/sessions', headers=headers).json()['sessions'] == []
+        assert client.delete(url, headers=headers).status_code == 404
+        assert client.post('/api/chat', headers=headers, json={'message': 'hola'}).status_code == 200
+    with TestClient(create_app(settings)) as client:
+        assert client.get(url, headers=headers).status_code == 404
+        assert len(client.get('/api/sessions', headers=headers).json()['sessions']) == 1
+
+
 def config(path, permissions=None):
     identity = {'user_id': 'saved-alice', 'permissions': permissions if permissions is not None else ['internal_data', 'tracking', 'offices', 'summary', 'personal_data'], 'scope': ['global_internal']}
     return Settings(demo_mode=True, history_path=str(path), identities_json=json.dumps({TOKEN: identity, OTHER: {**identity, 'user_id': 'saved-bob'}}))

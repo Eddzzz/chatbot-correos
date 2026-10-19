@@ -28,7 +28,10 @@ def compose_answer(request_id: str, session_id: str, result: QueryResult) -> Cha
             else:
                 answer = f'Encontré {len(result.rows)} registros para el código {first["tracking_code"]}. Revisa sus familias y estados en la tabla; pueden representar registros relacionados.'
         elif 'nombre' in first and 'sucursal' in first:
-            answer = f'Personal asignado: encontré {len(result.rows)} ' + ('persona' if len(result.rows)==1 else 'personas') + ' en las sucursales consultadas, según la asignación registrada en el respaldo. La tabla muestra sus datos disponibles.'
+            if 'fecha_registro' in first:
+                answer = ('Última persona registrada en las sucursales consultadas, según la fecha de registro guardada en el respaldo.' if len(result.rows)==1 else f'Encontré {len(result.rows)} personas con la misma fecha de registro más reciente en las sucursales consultadas. Se muestran todas las coincidencias del respaldo.') + ' La tabla incluye la fecha de registro.'
+            else:
+                answer = f'Personal asignado: encontré {len(result.rows)} ' + ('persona' if len(result.rows)==1 else 'personas') + ' en las sucursales consultadas, según la asignación registrada en el respaldo. La tabla muestra sus datos disponibles.'
         elif 'office_id' in first:
             answer = f'Encontré {len(result.rows)} ' + ('sucursal' if len(result.rows) == 1 else 'sucursales') + ' para los filtros indicados. La tabla muestra el municipio, departamento y teléfono institucional disponibles; no hay horarios ni direcciones en esta fuente.'
         elif 'total' in first:

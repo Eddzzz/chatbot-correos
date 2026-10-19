@@ -169,3 +169,55 @@ def test_explicit_office_topic_is_preserved_instead_of_recovering_an_older_perso
         body=api.post('/api/chat',headers=headers,json={'message':'y de Santa Cruz','session_id':first['session_id']}).json()
         assert body['status']=='answer'
         assert 'municipality' in body['columns'] and 'nombre' not in body['columns']
+
+
+class DatedReader(Reader):
+    def __init__(self,dates,limited=False):
+        super().__init__(limited=limited)
+        self.dates=dates
+
+    async def run_read(self,query,context):
+        result=await super().run_read(query,context)
+        users=result.rows[0]['details']['relaciones']['usuarios']
+        users['registros']=[{'campos':{'id':100-index,'name':f'Persona {index+1}','created_at':date}} for index,date in enumerate(self.dates)]
+        return result
+
+
+def test_latest_personnel_uses_registration_date_and_keeps_department_context():
+    reader=DatedReader(['2026-06-25T15:00:00','2026-08-01T12:00:00','2026-07-31T23:00:00'])
+    with client(reader) as api:
+        headers={'Authorization':'Bearer '+TOKEN}
+        first=api.post('/api/chat',headers=headers,json={'message':'el personal de oruro'}).json()
+        body=api.post('/api/chat',headers=headers,json={'message':'ame los datos del ultimo personal registrao de la paz','session_id':first['session_id']}).json()
+        assert body['status']=='answer'
+        assert len(body['rows'])==1 and body['rows'][0]['nombre']=='Persona 2'
+        assert body['rows'][0]['fecha_registro']=='2026-08-01T12:00:00'
+        assert reader.queries[-1].parameters['department']=='La Paz'
+        assert 'registro' in body['answer'].lower() and 'última' in body['answer'].lower()
+        again=api.post('/api/chat',headers=headers,json={'message':'y de Santa Cruz','session_id':first['session_id']}).json()
+        assert len(again['rows'])==1 and reader.queries[-1].parameters['department']=='Santa Cruz'
+
+
+def test_latest_personnel_followup_does_not_require_repeating_the_department():
+    with client(DatedReader(['2026-01-01T12:00:00','2026-08-01T12:00:00'])) as api:
+        headers={'Authorization':'Bearer '+TOKEN}
+        first=api.post('/api/chat',headers=headers,json={'message':'personal de la sucursal de La Paz'}).json()
+        body=api.post('/api/chat',headers=headers,json={'message':'y el último registrado','session_id':first['session_id']}).json()
+        assert body['status']=='answer' and len(body['rows'])==1
+        assert body['rows'][0]['nombre']=='Persona 2'
+
+
+@pytest.mark.parametrize('dates,limited', [([None,'2026-08-01T12:00:00'],False),(['fecha inválida'],False),(['2026-08-01T12:00:00'],True)])
+def test_latest_personnel_does_not_guess_from_missing_dates_or_a_partial_list(dates,limited):
+    with client(DatedReader(dates,limited)) as api:
+        body=api.post('/api/chat',headers={'Authorization':'Bearer '+TOKEN},json={'message':'último personal registrado de La Paz'}).json()
+        assert body['status']=='needs_clarification'
+        assert not body.get('rows')
+
+
+def test_latest_personnel_keeps_all_people_tied_on_the_latest_date():
+    with client(DatedReader(['2026-01-01T12:00:00','2026-08-01T12:00:00','2026-08-01T12:00:00'])) as api:
+        body=api.post('/api/chat',headers={'Authorization':'Bearer '+TOKEN},json={'message':'último personal registrado de La Paz'}).json()
+        assert body['status']=='answer' and len(body['rows'])==2
+        assert {row['nombre'] for row in body['rows']}=={'Persona 2','Persona 3'}
+        assert 'misma' in body['answer'].lower()

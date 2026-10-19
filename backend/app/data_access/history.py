@@ -27,7 +27,7 @@ class HistoryStore:
             connection.close()
 
     def save(self, chat_id, session):
-        payload = {'messages': session.messages, 'filters': session.filters,
+        payload = {'messages': session.messages, 'filters': session.filters, 'contexts': session.contexts,
                    'last_intent': session.last_intent.model_dump(mode='json') if session.last_intent else None}
         with self.connect() as connection:
             connection.execute('''INSERT INTO chats VALUES (?,?,?,?,?,?,?)
@@ -49,6 +49,10 @@ class HistoryStore:
         return [{'session_id': row['id'], 'title': row['title'], 'updated_at': row['updated_at']}
                 for row in rows if set(json.loads(row['permissions'])) <= principal.permissions
                 and tuple(json.loads(row['scope'])) == principal.scope]
+
+    def delete(self, chat_id, owner):
+        with self.connect() as connection:
+            connection.execute('DELETE FROM chats WHERE id=? AND owner=?', (chat_id, owner))
 
     def count(self, owner):
         with self.connect() as connection:

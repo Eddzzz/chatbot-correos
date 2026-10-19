@@ -1,5 +1,6 @@
 from app.analytics.public import plan_analysis
 from dataclasses import replace
+from datetime import datetime, timezone
 from app.contracts import AccessContext, IntentDecision, ServiceError
 from app.data_access.public import QuerySpec, ReadPort
 from app.policies.public import authorize_operation, authorize_details
@@ -24,6 +25,22 @@ class ToolRegistry:
             query = QuerySpec(template='offices', parameters={'department': intent.department})
         elif intent.operation in {'summary','accounting'}:
             query = plan_analysis(intent)
+            if intent.operation == 'summary' and intent.dimension in {'department', 'office'}:
+                authorize_operation(context, 'offices')
+                destinations = await self.reader.run_read(query.model_copy(update={'template': 'summary_destination'}), context)
+                offices = await self.reader.run_read(QuerySpec(template='offices', parameters={'department': None}), context)
+                if destinations.truncated or offices.truncated:
+                    raise ServiceError('clarify', 'El desglose por destino o el directorio está limitado. Acota el periodo o consulta por destino para ver los resultados parciales.', 422)
+                def normalized(value):
+                    import unicodedata
+                    return ' '.join(''.join(c for c in unicodedata.normalize('NFD', value or '') if not unicodedata.combining(c)).casefold().split())
+                totals = {}
+                for row in destinations.rows:
+                    matches = [office for office in offices.rows if normalized(office.get('municipality')) and normalized(office.get('municipality')) == normalized(row.get('destination'))]
+                    label = (matches[0].get('department') if intent.dimension == 'department' else matches[0].get('municipality')) if len(matches) == 1 else None
+                    label = label or 'Sin correspondencia'
+                    totals[label] = totals.get(label, 0) + row['total']
+                return replace(destinations, rows=[{intent.dimension: label, 'total': total} for label, total in sorted(totals.items(), key=lambda item: (-item[1], item[0]))], source=destinations.source+' · correspondencia con '+offices.source)
         else:
             raise ServiceError('unsupported', 'Esta operación no está disponible.', 422)
         if detail and intent.operation in {'tracking', 'offices'}:
@@ -39,6 +56,7 @@ class ToolRegistry:
         result = await self.reader.run_read(query, context)
         if intent.operation=='offices' and intent.office_personnel:
             rows=[]
+            dates=[]
             limited=result.truncated
             for office in result.rows:
                 details=office.get('details',{})
@@ -48,6 +66,20 @@ class ToolRegistry:
                 for person in personnel.get('registros',[]):
                     data=person.get('campos',{})
                     rows.append({'nombre':data.get('name'),'correo_electronico':data.get('email'),'documento_identidad':data.get('ci'),'ciudad':data.get('ciudad'),'sucursal':fields.get('municipio'),'departamento':office.get('department')})
+                    if intent.latest_personnel:
+                        rows[-1]['fecha_registro']=data.get('created_at')
+                        dates.append(data.get('created_at'))
+            if intent.latest_personnel:
+                if limited:
+                    raise ServiceError('clarify','La lista disponible está limitada; no puedo confirmar cuál es la última persona registrada con estos resultados parciales.',422)
+                if rows:
+                    try:
+                        timestamps=[datetime.fromisoformat(str(value)) for value in dates]
+                        timestamps=[value.astimezone(timezone.utc) if value.tzinfo else value for value in timestamps]
+                        latest=max(timestamps)
+                    except (ValueError,TypeError):
+                        raise ServiceError('clarify','Faltan fechas de registro válidas o comparables en el personal consultado; no puedo confirmar cuál fue la última persona registrada.',422) from None
+                    rows=[row for row,registered in zip(rows,timestamps) if registered==latest]
             return replace(result,rows=rows,truncated=limited)
         return result
 

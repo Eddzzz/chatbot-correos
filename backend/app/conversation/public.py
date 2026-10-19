@@ -5,11 +5,11 @@ import re
 import unicodedata
 from difflib import get_close_matches
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
 from pathlib import Path
 from app.answers.public import compose_answer
-from app.analytics.public import resolve_period, is_period_followup, describe_period
+from app.analytics.public import MONTHS, resolve_period, is_period_followup, describe_period
 from app.contracts import AccessContext, ChatRequest, ChatResponse, IntentDecision, ServiceError
 from app.policies.public import OUTSIDE, UNAVAILABLE
 from app.data_access.public import HistoryStore
@@ -26,6 +26,7 @@ class Session:
     title: str = 'Nueva conversación'
     required_permissions: set[str] = field(default_factory=set)
     scope: tuple[str, ...] = ()
+    contexts: dict[str, dict] = field(default_factory=dict)
 
 
 class Conversation:
@@ -53,7 +54,7 @@ class Conversation:
                 if row:
                     payload = json.loads(row['payload'])
                     session = Session(owner=row['owner'], touched=time.monotonic(),
-                        messages=payload['messages'], filters=payload['filters'],
+                        messages=payload['messages'], filters=payload['filters'], contexts=payload.get('contexts', {}),
                         last_intent=IntentDecision.model_validate(payload['last_intent']) if payload['last_intent'] else None,
                         updated_at=row['updated_at'], title=row['title'],
                         required_permissions=set(json.loads(row['permissions'])), scope=tuple(json.loads(row['scope'])))
@@ -80,6 +81,14 @@ class Conversation:
     def history(self, session_id, principal):
         _, session = self.session(session_id, principal)
         return {'messages': session.messages}
+
+    def delete_session(self, session_id, principal):
+        self.session(session_id, principal)
+        if any(active_id == session_id for active_id, _ in self.active_sessions.values()):
+            raise ServiceError('session_busy', 'Espera a que termine la respuesta antes de eliminar esta conversación.', 409)
+        self.store.delete(session_id, principal.user_id)
+        self.sessions.pop(session_id, None)
+        return {'deleted': True}
 
     async def office_related_tables(self, office_id, principal):
         started = time.monotonic()
@@ -125,6 +134,21 @@ class Conversation:
         session = self.sessions[session_id]
         if any(active_id == session_id for active_id, _ in self.active_sessions.values()):
             raise ServiceError('session_busy', 'Esta conversación ya está respondiendo una consulta.', 409)
+        if request.edit_message_index is not None:
+            index = request.edit_message_index
+            if index >= len(session.messages) or session.messages[index]['role'] != 'user':
+                raise ServiceError('invalid_edit', 'Selecciona una consulta enviada para editarla.', 422)
+            context = session.contexts.get(str(index))
+            if context is None:
+                context = self.recover_edit_context(session, index)
+            context = context or {}
+            session.filters = dict(context.get('filters', {}))
+            session.last_intent = IntentDecision.model_validate(context['intent']) if context.get('intent') else None
+            session.messages = session.messages[:index]
+            session.contexts = {key: value for key, value in session.contexts.items() if int(key) < index}
+            if index == 0:
+                session.title = 'Nueva conversación'
+        session.contexts[str(len(session.messages))] = {'filters': dict(session.filters), 'intent': session.last_intent.model_dump(mode='json') if session.last_intent else None}
         self.active_sessions[request_id] = (session_id, task)
         self.running[request_id] = (principal.user_id, task)
         answer = None
@@ -168,7 +192,10 @@ class Conversation:
                             if previous_personnel and previous_personnel.department:
                                 department_followup = department_followup.model_copy(update={'detail': True, 'office_personnel': True})
                             break
-                    if personnel:
+                    dimension = self.summary_dimension_followup(request.message)
+                    if dimension and session.last_intent and session.last_intent.operation == 'summary':
+                        intent = session.last_intent.model_copy(update={'dimension': dimension, 'list_records': False})
+                    elif personnel:
                         intent = personnel
                     elif department_followup:
                         intent = department_followup
@@ -181,7 +208,7 @@ class Conversation:
                     elif is_period_followup(request.message) and session.last_intent and session.last_intent.operation in {'summary','accounting'}:
                         intent = session.last_intent.model_copy()
                     elif self.is_detail_followup(request.message):
-                        intent = (session.last_intent.model_copy(update={'detail': True, 'office_personnel': False})
+                        intent = (session.last_intent.model_copy(update={'detail': True, 'office_personnel': False, 'latest_personnel': False})
                                   if session.last_intent and session.last_intent.operation in {'offices', 'tracking'}
                                   else session.last_intent.model_copy(update={'list_records':True}) if session.last_intent and session.last_intent.operation=='summary'
                                   else IntentDecision(operation='clarify'))
@@ -195,7 +222,7 @@ class Conversation:
                         intent = await self.model.interpret(request.message, context={**confirmed, 'last_operation': session.last_intent.operation if session.last_intent else None, 'last_office_personnel': bool(session.last_intent and session.last_intent.office_personnel), 'last_detail': bool(session.last_intent and session.last_intent.detail)})
                         if intent.operation in {'tracking', 'offices'} and self.requests_details(request.message):
                             intent = intent.model_copy(update={'detail': True})
-                    if intent.operation=='summary' and re.search(r'\b(registros?|envios?|envíos?|paquetes?)\b',request.message.casefold()) and not re.search(r'\b(cuenta|contar|cuantos|cuántos|conteo|resumen|total)\b',request.message.casefold()):
+                    if intent.operation=='summary' and not dimension and re.search(r'\b(registros?|envios?|envíos?|paquetes?)\b',request.message.casefold()) and not re.search(r'\b(cuenta|contar|cuantos|cuántos|conteo|resumen|total)\b',request.message.casefold()):
                         intent=intent.model_copy(update={'list_records':True})
                     operation = intent.operation + ('_details' if intent.detail or intent.office_personnel else '')
                     intent = self.validate_filters(intent, request.message, confirmed)
@@ -208,6 +235,9 @@ class Conversation:
                         session.last_intent = intent if result.rows or intent.operation in {'offices','summary','accounting'} else None
                         session.filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code', 'start_date', 'end_date', 'department','family'} and value is not None}
                         session.required_permissions.update({'internal_data', 'summary' if intent.operation=='accounting' else intent.operation})
+                        if intent.operation == 'summary' and intent.dimension in {'department', 'office'}:
+                            session.required_permissions.add('offices')
+                            answer.answer += ' Desglose por destino registrado y su correspondencia exacta con el municipio del directorio; no identifica la oficina responsable del envío. Los destinos sin coincidencia única figuran como «Sin correspondencia».'
                         if ((intent.detail or intent.office_personnel) and intent.operation in {'tracking','offices'}) or intent.operation=='accounting':
                             session.required_permissions.add('personal_data')
                         if intent.operation in {'summary','accounting'}:
@@ -278,21 +308,97 @@ class Conversation:
     @staticmethod
     def is_personnel_followup(message):
         words=set(Conversation.normalized_words(message))
-        return bool(words & {'personal','empleados','funcionarios','trabajadores','usuarios'}) and words <= {'personal','empleados','funcionarios','trabajadores','usuarios','dame','que','hay','en','la','el','los','las','de','del','y','su','sus','esa','ese','esta','este','sucursal','oficina','sucursales','oficinas','muestra','muestrame','lista','listar','quiero','ver','tabla','tablas','por','favor','asignados','asignado'}
+        return bool(words & {'personal','empleados','funcionarios','trabajadores','usuarios','ultimo','ultima','reciente','recientes'}) and words <= {'personal','empleados','funcionarios','trabajadores','usuarios','dame','que','hay','en','la','el','los','las','de','del','y','su','sus','esa','ese','esta','este','sucursal','oficina','sucursales','oficinas','muestra','muestrame','lista','listar','quiero','ver','tabla','tablas','por','favor','asignados','asignado','ultimo','ultima','reciente','recientes','registrado','registrada','registrao','datos'}
 
     @staticmethod
     def office_personnel_intent(message, previous):
         words=set(Conversation.normalized_words(message))
-        if not words & {'personal','empleados','funcionarios','trabajadores','usuarios'}:
+        latest=bool(words & {'ultimo','ultima','reciente','recientes'})
+        followup=Conversation.is_personnel_followup(message)
+        if not words & {'personal','empleados','funcionarios','trabajadores','usuarios'} and not (latest and followup and previous and previous.office_personnel):
             return None
         departments=Conversation.office_departments(message)
-        followup=Conversation.is_personnel_followup(message)
         if not departments and not words & {'sucursal','sucursales','oficina','oficinas'} and not followup:
             return None
         if len(departments)>1:
             raise ServiceError('clarify','Indica un departamento a la vez para consultar el personal de sus sucursales.',422)
         department=departments[0] if departments else previous.department if followup and previous and previous.operation=='offices' else None
-        return IntentDecision(operation='offices',department=department,detail=True,office_personnel=True)
+        return IntentDecision(operation='offices',department=department,detail=True,office_personnel=True,latest_personnel=latest)
+
+    @staticmethod
+    def recover_edit_context(session, index):
+        """Recover old turns from saved answers, never from the discarded future."""
+        filters, previous, user = {}, None, ''
+        for position, message in enumerate(session.messages[:index]):
+            if message['role'] == 'user':
+                snapshot = session.contexts.get(str(position))
+                if snapshot is not None:
+                    filters = dict(snapshot.get('filters', {}))
+                    previous = IntentDecision.model_validate(snapshot['intent']) if snapshot.get('intent') else None
+                user = message['content']
+                continue
+            if message.get('status') not in {'answer', 'no_results'}:
+                continue
+            text = message.get('content', '')
+            rows = message.get('rows') or []
+            columns = set(message.get('columns') or (rows[0] if rows else {}))
+            period_label = text.partition('Periodo consultado: ')[2].split('. ', 1)[0]
+            browser = message.get('record_browser')
+            intent = None
+            if period_label or browser:
+                period = None
+                if browser:
+                    period = browser['start_date'], browser['end_date']
+                else:
+                    # These are the exact calendar labels emitted by describe_period.
+                    days = re.findall(r'\b(\d{1,2}) de ([a-z]+) de (\d{4})', period_label)
+                    try:
+                        if days:
+                            dates = [date(int(year), MONTHS.index(month)+1, int(day)) for day, month, year in days]
+                            period = dates[0].isoformat(), (dates[-1]+timedelta(days=1)).isoformat()
+                        else:
+                            period = resolve_period(period_label.split(' (', 1)[0])
+                    except (ValueError, ServiceError):
+                        pass
+                accounting = 'category' in columns or 'Movimientos y cobros' in (message.get('source') or '')
+                dimension = next((key for key in ('department', 'office', 'source', 'destination', 'status') if key in columns), 'status')
+                family_label = text.partition('Familia consultada: ')[2].split('.', 1)[0]
+                intent = IntentDecision(operation='accounting' if accounting else 'summary',
+                    start_date=period[0] if period else None, end_date=period[1] if period else None,
+                    dimension=dimension, family=browser.get('family') if browser else Conversation.shipment_family(family_label),
+                    list_records=bool(browser), accounting_categories=Conversation.accounting_categories(user) or
+                    (previous.accounting_categories if previous and previous.operation=='accounting' and Conversation.is_accounting_followup(user) else ['movimientos','cobros','facturacion']))
+            elif 'office_id' in columns or {'nombre', 'sucursal'} <= columns or 'Directorio de sucursales' in (message.get('source') or ''):
+                departments = Conversation.office_departments(user)
+                intent = Conversation.office_personnel_intent(user, previous)
+                if intent is None:
+                    intent = IntentDecision(operation='offices', department=departments[0] if len(departments)==1 else
+                        previous.department if previous and previous.operation=='offices' and Conversation.is_detail_followup(user) else None,
+                        detail='details' in columns, office_personnel={'nombre','sucursal'} <= columns)
+            elif 'tracking_code' in columns:
+                codes = {row.get('tracking_code') for row in rows if row.get('tracking_code')}
+                if len(codes)==1:
+                    intent = IntentDecision(operation='tracking', tracking_code=next(iter(codes)), detail='details' in columns)
+            if intent:
+                previous = intent
+                filters = {key: value for key, value in intent.model_dump().items() if key in {'tracking_code','start_date','end_date','department','family'} and value is not None}
+        return {'filters': filters, 'intent': previous.model_dump(mode='json') if previous else None}
+
+    @staticmethod
+    def summary_dimension_followup(message):
+        words = set(Conversation.normalized_words(message))
+        dimensions = {'departamento': 'department', 'departamentos': 'department', 'oficina': 'office', 'oficinas': 'office', 'sucursal': 'office', 'sucursales': 'office', 'sucursale': 'office', 'estado': 'status', 'estados': 'status', 'destino': 'destination', 'destinos': 'destination', 'familia': 'source', 'familias': 'source', 'tipo': 'source', 'tipos': 'source'}
+        # Correct dimension words only; never discard unknown filters or places.
+        words = {get_close_matches(word, dimensions, n=1, cutoff=.88)[0] if word not in dimensions and len(word) >= 7 and get_close_matches(word, dimensions, n=1, cutoff=.88) else word for word in words}
+        allowed = set(dimensions) | set(('dame por de del el la los las y ahora todas todos toda todo muestra muestrame quiero ver favor '
+            'puedes puede podrias podria mostrar mostrarme necesito quisiera saber me lo eso esto esa ese esas esos esta este estas estos '
+            'a en entre para segun cada mismo misma mismos mismas tambien solo solamente cuanto cuanta cuantos cuantas corresponde corresponden '
+            'desglosa desglosalo desglosar desglosarlo desglosado desglosada desglose detalle detalles detallado detallada '
+            'agrupa agrupalo agrupar agruparlo agrupado agrupada agrupacion separa separalo separar separado separada '
+            'distribuye distribuyelo distribuido distribuida distribucion divide dividelo dividido dividida '
+            'resumen resultado resultados consulta datos cantidad cantidades total totales volumen carga registros envio envios paquete paquetes').split())
+        found = {value for word, value in dimensions.items() if word in words}
+        return next(iter(found)) if len(found) == 1 and words <= allowed else None
 
     @staticmethod
     def shipment_family(message):
@@ -375,7 +481,7 @@ class Conversation:
     def validate_filters(intent, message, confirmed):
         updates = {}
         text = message.casefold()
-        continuation = Conversation.is_detail_followup(message) or bool(re.search(r'\b(su estado|ese envío|ese envio|mismo envío|mismo envio|ese código|ese codigo|mismo código|mismo codigo|ese periodo|ese período|mismo periodo|mismo período|esas fechas|mismas fechas)\b', text))
+        continuation = Conversation.is_detail_followup(message) or (intent.operation == "summary" and bool(Conversation.summary_dimension_followup(message))) or bool(re.search(r'\b(su estado|ese envío|ese envio|mismo envío|mismo envio|ese código|ese codigo|mismo código|mismo codigo|ese periodo|ese período|mismo periodo|mismo período|esas fechas|mismas fechas)\b', text))
         if intent.operation == 'tracking':
             candidates = re.findall(r'\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b', message)
             new_codes = [value for value in candidates if any(char.isdigit() for char in value) and value.casefold() != confirmed.get('tracking_code', '').casefold()]

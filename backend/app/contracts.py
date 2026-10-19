@@ -10,6 +10,7 @@ class StrictModel(BaseModel):
 class ChatRequest(StrictModel):
     message: str = Field(min_length=1, max_length=2000)
     session_id: str | None = Field(default=None, max_length=64, pattern=r'^[a-f0-9-]+$')
+    edit_message_index: int | None = Field(default=None, ge=0, strict=True)
 
 
 class AccessContext(StrictModel):
@@ -24,9 +25,10 @@ class IntentDecision(StrictModel):
     department: str | None = Field(default=None, max_length=80)
     start_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     end_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-    dimension: Literal['source', 'status', 'destination'] = 'status'
+    dimension: Literal['source', 'status', 'destination', 'department', 'office'] = 'status'
     detail: bool = False
     office_personnel: bool = False
+    latest_personnel: bool = False
     family: Literal['ems','certi','ordi','contrato','int'] | None = None
     list_records: bool = False
     accounting_categories: list[Literal['movimientos','cobros','facturacion']] = Field(default_factory=lambda:['movimientos','cobros','facturacion'],min_length=1,max_length=3)

@@ -22,7 +22,7 @@ $segments += "${frameLabels}concat=n=26:v=1:a=0,settb=1/24,setpts=N*4,format=yuv
 $interpolation = 'framerate=fps=24:interp_start=0:interp_end=255:scene=100'
 $segments += "[color]format=yuv420p,$interpolation[rgb]"
 $segments += "[mask]alphaextract,format=yuv420p,$interpolation[alpha]"
-$segments += '[rgb][alpha]alphamerge,trim=duration=4,format=yuva420p[animation]'
-& ffmpeg -hide_banner -loglevel warning -y -framerate 6 -i $spritePath -filter_complex ($segments -join ';') -map '[animation]' -an -c:v libvpx-vp9 -crf 25 -b:v 0 -auto-alt-ref 0 -metadata 'comment=24 ImageGen keyframes; gentle frame blending; 24 fps; 4 second loop' $videoPath
+$segments += '[rgb][alpha]alphamerge,setpts=PTS-STARTPTS,trim=duration=4,format=yuva420p[animation]'
+& ffmpeg -hide_banner -loglevel warning -y -framerate 6 -i $spritePath -filter_complex ($segments -join ';') -map '[animation]' -an -r 24 -fps_mode cfr -frames:v 96 -c:v libvpx-vp9 -crf 25 -b:v 0 -auto-alt-ref 0 -metadata 'comment=24 ImageGen keyframes; gentle frame blending; 24 fps; 4 second loop' $videoPath
 if ($LASTEXITCODE -ne 0) { throw 'Animation generation failed.' }
 Write-Output $videoPath
