@@ -1,20 +1,61 @@
+# Local services, credentials and imported institutional data
 .runtime/
-**/.venv/
-**/__pycache__/
-**/.pytest_cache/
-**/node_modules/
-**/dist/
 .env
 .env.*
 !.env.example
+.pgpass
+pgpass.conf
+*.pem
+*.key
+*.p12
+*.pfx
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Python environments and caches
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+*.py[cod]
+.coverage
+.coverage.*
+htmlcov/
+
+# Frontend dependencies and build output
+**/node_modules/
+**/dist/
+**/*.tsbuildinfo
+**/.vite/
+
+# Downloaded models
 *.gguf
 *.gguf.partial
 models/
-*.dump
-*.backup
+
+# Browser checks and generated artifacts
 **/.playwright-cli/
-**/*.tsbuildinfo
-**/.ruff_cache/
 output/
 test-results/
 playwright-report/
+coverage/
+*.log
+
+# Local editor and operating system files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
