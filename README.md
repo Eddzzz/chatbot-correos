@@ -1,93 +1,496 @@
-# Chat interno de Correos Bolivia
+# Asistente postal · Correos Bolivia
 
-Implementación local del plan: FastAPI modular, React/TypeScript, PostgreSQL de solo lectura y una instancia de Qwen3.5-2B Q4_K_M servida por llama.cpp **solo CPU**. Windows es el entorno validado. Incluye plantillas systemd/Nginx para Linux, aún sin despliegue institucional.
+Asistente de consulta interna para explorar seguimiento postal, sucursales, personal autorizado y resúmenes de registros mediante preguntas en español. Combina una interfaz React, una API modular FastAPI, PostgreSQL de solo lectura y un modelo local ejecutado en CPU con llama.cpp.
 
-El esquema se obtuvo del respaldo suministrado: 122 tablas y 159 claves foráneas. **La aplicación ya está conectada a datos reales de ese respaldo:** 74.137 registros de seguimiento y 9 sucursales. La proyección resumida de siete tablas excluye datos personales; las fichas completas autorizadas disponen de una proyección privada adicional de 23 tablas, sin contraseñas, tokens ni contenido de adjuntos. El archivo original permanece intacto. El respaldo fue creado el **8 de octubre de 2026 a las 14:59:32**, sin zona horaria declarada; no es una conexión con actualizaciones en vivo.
+El modelo interpreta la intención y los filtros. El servidor valida permisos, ejecuta consultas de un catálogo cerrado y redacta la respuesta a partir de los resultados, con fuente, fecha de consulta y avisos de información parcial.
 
-## Estado actual: datos reales
+> **Estado:** implementación local validada en Windows. Hay una instalación conectada a una copia del respaldo institucional del **8 de octubre de 2026**, sin actualización en vivo. Clonar este repositorio no incluye esa base, credenciales, historial ni pesos del modelo. El entorno reproducible de inicio utiliza datos ficticios independientes. Las plantillas Linux están pendientes de validación institucional.
 
-Los servicios locales están configurados para la base `correos_sandbox_institutional` en `127.0.0.1:55432`. Abrir [chat local](http://127.0.0.1:5173); la credencial permanece en `.runtime/operator-token.txt`. La etiqueta «Datos reales · respaldo 2026-10-08» y la fuente de cada respuesta identifican la procedencia.
+## Contenido
 
-Para reiniciar la API usar `./scripts/start_backend.ps1` **sin** `-Fixture`; carga automáticamente `.runtime/institutional-env.json`. Inferencia y frontend se arrancan como se indica debajo. El cluster PostgreSQL local debe estar activo. `-Fixture` sigue disponible para volver explícitamente a los datos ficticios sin modificar la base real importada.
+- [Funciones](#funciones)
+- [Arquitectura](#arquitectura)
+- [Flujos de funcionamiento](#flujos-de-funcionamiento)
+- [Stack tecnológico](#stack-tecnológico)
+- [Requisitos](#requisitos)
+- [Instalación desde cero](#instalación-desde-cero)
+- [Arranque y parada](#arranque-y-parada)
+- [Configuración](#configuración)
+- [API y contratos](#api-y-contratos)
+- [Datos y procedencia](#datos-y-procedencia)
+- [Seguridad y límites](#seguridad-y-límites)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Pruebas y CI](#pruebas-y-ci)
+- [Despliegue y operación](#despliegue-y-operación)
+- [Solución de problemas](#solución-de-problemas)
+- [Alcance pendiente y documentación](#alcance-pendiente-y-documentación)
 
-Validación reproducible con la API activa: `backend/.venv/Scripts/python.exe scripts/check_institutional.py`. Compara seguimiento y conteos contra PostgreSQL, comprueba las nueve sucursales y verifica la procedencia. [Resultados y reglas verificadas](docs/institutional-data.md).
+## Funciones
 
-Las [fichas completas](docs/full-details.md) amplían sucursales y envíos con sus campos y relaciones revisadas, incluidos datos personales para identidades con `personal_data`. Después de consultar una sucursal o código, escribir «dame los datos completos» mantiene ese contexto. Contraseñas/tokens quedan excluidos; los adjuntos se indican por presencia y las listas asociadas tienen límites visibles.
+| Área | Comportamiento implementado |
+| --- | --- |
+| Seguimiento | Consulta por código exacto, estado, origen, destino y fechas registradas; un código puede corresponder a varios registros. |
+| Sucursales | Directorio por departamento, fichas completas y navegación de relaciones disponibles. |
+| Personal | Consultas de personal relacionado con una sucursal, sujetas a permisos de datos personales. |
+| Resúmenes | Conteos por estado, familia y destino; desgloses geográficos según las correspondencias documentadas. |
+| Periodos | Rangos explícitos y expresiones como «todo octubre» o «el mes pasado», con aclaración cuando falta contexto. |
+| Familias postales | EMS, certificados, ordinarios, contratos e internacionales; continuaciones que conservan el periodo confirmado. |
+| Registros individuales | Lista paginada por periodo y familia, con navegación siguiente/anterior y límites de tamaño. |
+| Fuentes contables | Consulta separada de movimientos, cobros y registros de facturación autorizados, sin inferir moneda ni balances. |
+| Conversaciones | Historial SQLite por operador, URL `/c/{id}`, búsqueda por título y recuperación tras reiniciar. |
+| Edición | Reenvío de una consulta anterior recuperando su contexto y reemplazando los turnos posteriores. |
+| Eliminación | Confirmación visual y borrado del chat propio; se impide mientras está respondiendo. |
+| Interfaz | Tema claro/oscuro, diseño adaptable, controles de teclado y cartero animado con alternativa de movimiento reducido. |
+| Respuesta progresiva | Eventos SSE de estado, respuesta verificada y cancelación de solicitudes propias. |
 
-## Preparar un entorno de demostración desde cero
+Ejemplos para el entorno ficticio: «Consulta el seguimiento de DEMO-CERTI-001», «¿Y su estado?», «Lista las oficinas de La Paz» y «Cuenta registros por estado desde 2026-01-01 hasta 2027-01-01, fecha final exclusiva».
 
-Requisitos: PostgreSQL 18 (herramientas en `C:/Program Files/PostgreSQL/18/bin`), Python/uv y Node.js 22. `uv` instala Python 3.12 al solicitarlo. No hace falta Docker.
+Para explorar continuaciones: consultar un periodo, pedir «de EMS», «por departamentos» y después «todos los registros». La disponibilidad de cada operación depende de los datos y permisos del entorno.
 
-Desde la raíz del proyecto, preparar una vez:
+## Arquitectura
+
+### Vista general
+
+```mermaid
+flowchart TB
+    U[Operador interno] --> UI[React y TypeScript]
+    UI -->|Mismo origen: HTTP y SSE| API[FastAPI]
+    API --> ID[Identidad y permisos]
+    API --> C[Conversación y contexto confirmado]
+    C --> I[Gateway de inferencia con cola]
+    I --> L[llama.cpp CPU: Qwen3.5-2B]
+    L -->|Intención y filtros estructurados| C
+    C --> T[Operaciones y políticas]
+    T --> D[Catálogo SQL parametrizado y validación AST]
+    D -->|Transacción de lectura| PG[(PostgreSQL: vistas autorizadas)]
+    T --> R[Respuesta en español con evidencia]
+    R --> C
+    C --> H[(SQLite privado: historial)]
+    C --> A[Auditoría JSON sin mensajes ni filas]
+    C -->|Resultado verificado| API
+    API --> UI
+```
+
+La API es un monolito modular: se despliega como un proceso y separa responsabilidades mediante contratos y archivos `public.py`. `backend/app/bootstrap.py` compone los adaptadores de identidad, inferencia, datos, operaciones y conversación. Las pruebas comprueban las fronteras de importación y la ausencia de ciclos.
+
+| Módulo | Responsabilidad |
+| --- | --- |
+| `identity` | Resolver tokens y construir una identidad confiable del servidor. |
+| `policies` | Comprobar permisos y alcance de las operaciones. |
+| `conversation` | Coordinar consultas, contexto, historial, edición y cancelación. |
+| `operations` | Ejecutar herramientas permitidas y validar sus argumentos. |
+| `analytics` | Construir resúmenes y agrupaciones admitidos. |
+| `data_access` | Consultar PostgreSQL y persistir historial SQLite con adaptadores separados. |
+| `inference` | Interpretar mensajes mediante reglas de demostración o modelo HTTP local. |
+| `answers` | Presentar resultados factuales en español. |
+| `audit` | Registrar estado, operación, identidad interna, versión y duración. |
+
+Solo `data_access/infrastructure.py` importa el driver SQL de negocio. La escritura del historial SQLite es independiente de la cuenta de lectura postal de PostgreSQL.
+
+### Topología local
+
+```mermaid
+flowchart LR
+    B[Navegador] -->|127.0.0.1:5173| V[Vite]
+    V -->|Proxy /api| F[FastAPI: 8000]
+    F -->|HTTP /v1| M[llama.cpp: 8081]
+    F -->|Lectura de vistas| P[PostgreSQL: 55432]
+    F --> S[(Historial SQLite)]
+    P --> PF[Base ficticia]
+    P --> PI[Base institucional importada, opcional]
+```
+
+La instalación local puede alojar ambas bases en el mismo cluster. `-Fixture` selecciona explícitamente la ficticia; el arranque habitual prefiere la configuración institucional cuando existe. PostgreSQL y el modelo no se consultan directamente desde el navegador.
+
+## Flujos de funcionamiento
+
+### Consulta y respuesta
+
+```mermaid
+sequenceDiagram
+    actor O as Operador
+    participant UI as Interfaz
+    participant API as API y conversación
+    participant LLM as Modelo local
+    participant DB as PostgreSQL
+    participant H as Historial SQLite
+    O->>UI: Escribe una pregunta
+    UI->>API: POST /api/chat/stream y Bearer
+    API->>API: Autenticar y comprobar sesión propia
+    API-->>UI: request_started y status
+    API->>API: Resolver contexto y reglas aplicables
+    opt Se necesita interpretación del modelo
+        API->>LLM: Mensaje y contexto permitido
+        LLM-->>API: Intención y filtros estructurados
+    end
+    API->>API: Validar filtros, alcance y permisos
+    alt Consulta autorizada y suficientemente precisa
+        API->>DB: SQL fijo parametrizado, solo lectura
+        DB-->>API: Filas dentro de límites
+        API->>API: Redactar respuesta con evidencia
+        API->>H: Guardar mensajes, resultados y contexto
+        API-->>UI: answer_chunk y completed
+    else Falta información o autorización
+        API-->>UI: Aclaración, denegación o error explícito
+    end
+```
+
+Los fragmentos `answer_chunk` se emiten después de verificar los resultados. El progreso temprano indica actividad; no presenta texto factual sin comprobar. Una cancelación detiene la tarea y las operaciones HTTP/SQL asíncronas asociadas.
+
+### Historial, edición y eliminación
+
+```mermaid
+flowchart TD
+    A[Ingresar como operador] --> B[Listar chats autorizados]
+    B --> C[Abrir /c/id]
+    C --> D[Validar propietario y permisos vigentes]
+    D --> E[Recuperar mensajes y contexto desde SQLite]
+    E --> F{Acción}
+    F -->|Continuar| G[Consultar con contexto confirmado]
+    F -->|Editar| H[Recuperar contexto anterior al mensaje]
+    H --> I[Reemplazar consulta y turnos posteriores]
+    I --> G
+    F -->|Eliminar| J[Confirmar en la interfaz]
+    J --> K[Verificar que no exista respuesta en curso]
+    K --> L[Borrar mensajes y contexto del chat]
+```
+
+El UUID identifica el chat y su URL; conocerlo no concede acceso. El TTL limpia caché de memoria, no borra el historial. La edición de chats antiguos reconstruye únicamente contexto acreditado antes del mensaje editado.
+
+## Stack tecnológico
+
+Versiones declaradas por el proyecto; los archivos de bloqueo fijan las dependencias resueltas.
+
+| Capa | Tecnología y versión | Uso |
+| --- | --- | --- |
+| Interfaz | React / React DOM `19.3.1` | Componentes, chat y navegación. |
+| Lenguaje web | TypeScript `5.9.3` | Contratos y comprobación estática. |
+| Herramientas web | Vite `7.3.7`, npm | Desarrollo, proxy y build. |
+| API | Python `>=3.12`, FastAPI `>=0.115,<1`, Uvicorn `>=0.34,<1` | HTTP, SSE y ejecución asíncrona. |
+| Configuración | Pydantic Settings `>=2.7,<3` | Validación de variables y `.env`. |
+| Datos | PostgreSQL `18`, Psycopg `>=3.2,<4` con pool | Lectura asíncrona con permisos restringidos. |
+| Validación SQL | SQLGlot `>=26,<31` | Comprobar estructura AST del catálogo permitido. |
+| Cliente de inferencia | HTTPX `>=0.28,<1` | Comunicación con el servidor local. |
+| Historial | SQLite, biblioteca estándar Python | Persistencia privada de chats. |
+| Modelo | Qwen3.5-2B, GGUF `Q4_K_M` | Interpretación estructurada en español. |
+| Runtime del modelo | llama.cpp `b11696`, CPU x64 | Una generación concurrente, sin GPU. |
+| Pruebas | pytest, pytest-asyncio, unittest, Node Test Runner | Contratos, seguridad, lógica e integración. |
+| Automatización | GitHub Actions | Pruebas backend/frontend, build y auditoría npm. |
+| Servidor institucional | Nginx y systemd | Plantillas de HTTPS, proxy SSE y servicios Linux. |
+
+El manifiesto [config/model-manifest.json](config/model-manifest.json) fija revisión, archivo, licencia y SHA-256 del modelo y del runtime. El modelo ocupa **1.280.835.840 bytes**; no se versiona en Git. La selección del modelo sigue siendo provisional hasta completar la evaluación de negocio.
+
+## Requisitos
+
+| Requisito | Condición |
+| --- | --- |
+| Sistema local | Windows x64 y PowerShell; los scripts de instalación usan binarios Windows. |
+| Python | Python 3.12 y `uv` disponibles; `uv` puede preparar el intérprete solicitado. |
+| Node.js | Node.js 22 con npm, igual que el workflow de frontend. |
+| PostgreSQL | PostgreSQL 18 con `initdb`, `pg_ctl`, `psql`, `createdb` y `pg_restore`. Ruta predeterminada: `C:/Program Files/PostgreSQL/18/bin`. |
+| Git | Para clonar y actualizar el proyecto. |
+| Red inicial | Acceso a paquetes Python/npm y descargas fijadas del modelo/runtime. Después, las consultas usan servicios locales y los datos configurados. |
+| Puertos locales | `5173`, `8000`, `8081` y `55432` disponibles. |
+| Disco | Espacio para modelo, runtime, dependencias y cluster; el tamaño de una importación depende del respaldo. |
+| Recursos observados | Validación exploratoria en Intel Core i5-12500H y aproximadamente 16 GB de RAM; no se ha establecido un mínimo garantizado. |
+| Opcional | FFmpeg y FFprobe para reconstruir la animación; Playwright CLI y navegador para comprobaciones visuales. |
+
+No se necesita GPU ni Docker para el entorno local documentado. El runtime arranca con 4 hilos, contexto de 4096 tokens y una generación a la vez. En mediciones exploratorias históricas el proceso del modelo llegó aproximadamente a 2 GiB de memoria de trabajo; ese dato no representa el consumo total del sistema ni una garantía de capacidad. Ver [validación](docs/validation.md).
+
+## Instalación desde cero
+
+### 1. Clonar y preparar dependencias
+
+```powershell
+git clone https://github.com/Eddzzz/chatbot-correos.git
+Set-Location chatbot-correos
+Set-Location backend
+uv sync --frozen --python 3.12
+Set-Location ../frontend
+npm ci
+Set-Location ..
+```
+
+### 2. Descargar y verificar el modelo
+
+Desde la raíz, con Python 3.12 disponible:
 
 ```powershell
 python scripts/setup_inference.py
-./scripts/init_fixture.ps1
-python scripts/configure_fixture.py
-Set-Location frontend
-npm ci
 ```
 
-`init_fixture.ps1` crea una base **nueva** en `.runtime/postgres-fixture`, puerto `55432`, con secretos aleatorios y escucha solo local. Rehúsa sobrescribir un cluster existente. Si ya está preparada, omitir ese paso. Tras reiniciar Windows, volver a encender únicamente el fixture con:
+El script verifica SHA-256 antes de usar los archivos y prepara `.runtime/llama-cpu` y `models/`. Si ya existen archivos correctos, reutiliza la descarga verificada.
+
+### 3. Preparar PostgreSQL ficticio
+
+```powershell
+./scripts/init_fixture.ps1
+python scripts/configure_fixture.py
+```
+
+Si PostgreSQL está en otra ubicación:
+
+```powershell
+./scripts/init_fixture.ps1 -PostgresBin 'D:/PostgreSQL/18/bin'
+```
+
+El inicializador crea el cluster privado `.runtime/postgres-fixture`, la base `correos_sandbox_fixture` y secretos aleatorios. Escucha en `127.0.0.1:55432` y rehúsa sobrescribir un cluster existente. La configuración genera `.runtime/local-env.json` y la clave `.runtime/operator-token.txt`.
+
+## Arranque y parada
+
+Abrir tres terminales en la raíz del repositorio:
+
+| Terminal | Comando | Servicio |
+| --- | --- | --- |
+| 1 | `./scripts/start_inference.ps1` | Modelo local en `127.0.0.1:8081`. |
+| 2 | `./scripts/start_backend.ps1 -Fixture` | API con datos ficticios en `127.0.0.1:8000`. |
+| 3 | `npm --prefix frontend run dev` | Interfaz en `127.0.0.1:5173`. |
+
+Abrir [el chat local](http://127.0.0.1:5173) e ingresar la clave de `.runtime/operator-token.txt`. El token se conserva solo en memoria del navegador; al recargar puede ser necesario volver a ingresar. La preferencia de tema sí se guarda en `localStorage`.
+
+Después de reiniciar Windows, si el cluster ya existe y está detenido, arrancarlo desde la raíz:
 
 ```powershell
 & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D "$PWD/.runtime/postgres-fixture" -l "$PWD/.runtime/postgres-fixture.log" -o '-p 55432 -h 127.0.0.1' -w start
 ```
 
-En tres terminales, desde la raíz:
+Para una instalación institucional **ya preparada**, arrancar la API con `./scripts/start_backend.ps1` sin `-Fixture`. Cargará `.runtime/institutional-env.json` cuando exista. Esto no importa datos ni prepara una base nueva.
+
+Detener frontend, API y modelo con `Ctrl+C` en sus terminales. Después, para detener el cluster propiedad del proyecto:
 
 ```powershell
-./scripts/start_inference.ps1
+& 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D "$PWD/.runtime/postgres-fixture" -m fast -w stop
 ```
 
-```powershell
-./scripts/start_backend.ps1 -Fixture
+## Configuración
+
+Las variables empiezan por `CHATBOT_`. Los scripts de arranque cargan la configuración privada del entorno seleccionado; para ejecución directa, `Settings` también lee `.env` desde el directorio de trabajo. Ningún secreto pertenece al repositorio.
+
+| Variable | Valor predeterminado | Propósito |
+| --- | --- | --- |
+| `CHATBOT_DATABASE_URL` | Vacío | DSN de la cuenta de lectura PostgreSQL. |
+| `CHATBOT_IDENTITIES_JSON` | `{}` | Mapa confiable de tokens a operadores, permisos y alcance. Sin mapa se deniega acceso a datos. |
+| `CHATBOT_DEMO_MODE` | `false` | Datos integrados ficticios e interpretación por reglas. |
+| `CHATBOT_FIXTURE_DATA` | `false` | Identifica PostgreSQL ficticio con modelo real. |
+| `CHATBOT_DATA_SNAPSHOT` | Vacío | Etiqueta de procedencia del respaldo. |
+| `CHATBOT_LLAMA_URL` | `http://127.0.0.1:8081/v1` | Endpoint de inferencia local. |
+| `CHATBOT_LLAMA_MODEL` | `local` | Identificador enviado al runtime. |
+| `CHATBOT_MODEL_VERSION` | `unverified` | Versión verificable del modelo usada en auditoría. |
+| `CHATBOT_INFERENCE_TIMEOUT` | `60` segundos | Tiempo máximo de llamada al modelo. |
+| `CHATBOT_QUEUE_TIMEOUT` | `15` segundos | Espera máxima de inferencia. |
+| `CHATBOT_QUEUE_SIZE` | `4` | Solicitudes admitidas en espera. |
+| `CHATBOT_SESSION_TTL` | `1800` segundos | Caducidad de caché de contexto en memoria. |
+| `CHATBOT_MAX_SESSIONS` | `100` | Máximo de chats por operador, sin borrado automático. |
+| `CHATBOT_HISTORY_PATH` | Vacío | Permite sustituir la ubicación privada de SQLite. |
+| `CHATBOT_STATEMENT_TIMEOUT_MS` | `3000` | Timeout SQL. |
+| `CHATBOT_MAX_ROWS` | `100` | Límite general de filas por resultado. |
+| `CHATBOT_MAX_RESULT_BYTES` | `65536` | Límite general del tamaño de resultados. |
+
+El arranque institucional usa `.runtime/chat-history.sqlite3`; `-Fixture` usa `.runtime/chat-history-fixture.sqlite3`. Ver [configuración backend](backend/README.md) para un ejemplo de mapa de identidades y [historial](docs/saved-chats.md) para persistencia y permisos.
+
+## API y contratos
+
+Las rutas de datos requieren `Authorization: Bearer <token>`. El frontend usa el proxy del mismo origen. La interfaz Swagger y ReDoc está desactivada en la configuración actual.
+
+| Método | Ruta | Función |
+| --- | --- | --- |
+| GET | `/health` | Vida del proceso, sin verificar dependencias. |
+| GET | `/api/config` | Modo público de datos e inferencia, sin secretos. |
+| GET | `/api/health` | Diagnóstico de configuración; requiere `diagnostics`. |
+| GET | `/api/metrics` | Contadores en memoria; requiere `diagnostics`. |
+| POST | `/api/chat` | Consulta con respuesta JSON. |
+| POST | `/api/chat/stream` | Consulta con respuesta SSE. |
+| GET | `/api/sessions` | Listar chats propios autorizados. |
+| GET | `/api/sessions/{id}` | Recuperar chat; alias `/api/sessions/{id}/history`. |
+| DELETE | `/api/sessions/{id}` | Eliminar chat propio sin respuesta en curso. |
+| POST | `/api/requests/{request_id}/cancel` | Cancelar una solicitud propia activa. |
+| GET | `/api/postal-records` | Registros por periodo, familia y paginación. |
+| GET | `/api/offices/{office_id}/relations` | Inventario autorizado de relaciones de una sucursal. |
+| GET | `/api/offices/{office_id}/relations/{table_name}` | Página de registros relacionados. |
+
+Cuerpo para una consulta nueva:
+
+```json
+{
+  "message": "Lista las oficinas de La Paz",
+  "session_id": null
+}
 ```
 
-```powershell
-Set-Location frontend
-npm run dev -- --host 127.0.0.1
+Para continuar, enviar el `session_id` devuelto. Para editar, añadir `edit_message_index` con el índice desde cero del mensaje que se desea reemplazar en el historial completo, contando mensajes de usuario y asistente; la posición seleccionada debe corresponder a un mensaje de usuario. La edición reemplaza ese turno y los posteriores.
+
+Los eventos SSE son `request_started`, `status`, `answer_chunk`, `completed` y `error`, e incluyen `request_id`. `request_started` comunica el `session_id`; `completed` incluye estado, respuesta, filas y evidencia. Cada evidencia registra fuente, fecha de consulta, número de filas y truncamiento.
+
+Los registros paginados aceptan `start_date`, `end_date`, `family` opcional, `offset` y `limit` entre 1 y 20. Los rangos usan `[inicio, fin)`: el final es exclusivo. Los estados de respuesta incluyen aclaración, denegación, sin resultados, fuera de alcance y operación no soportada, además de respuesta y error.
+
+## Datos y procedencia
+
+El esquema de referencia comprende **122 tablas y 159 claves foráneas**. La proyección resumida inicial importa siete tablas y omite columnas personales. Las fichas completas añaden una proyección privada de 23 tablas para identidades autorizadas; el inventario de sucursales contempla 65 tablas relacionadas directa e indirectamente.
+
+La copia institucional documentada proviene del respaldo del **8 de octubre de 2026 a las 14:59:32**, sin zona horaria declarada. Sus conteos iniciales son:
+
+| Familia | Registros |
+| --- | ---: |
+| Contratos | 58.752 |
+| EMS | 6.679 |
+| Certificados | 5.231 |
+| Internacionales | 2.396 |
+| Ordinarios | 1.079 |
+| **Total de seguimiento** | **74.137** |
+| Sucursales | 9 |
+| Estados | 26 |
+
+```mermaid
+pie showData
+    title Registros de seguimiento de la copia institucional
+    "Contratos" : 58752
+    "EMS" : 6679
+    "Certificados" : 5231
+    "Internacionales" : 2396
+    "Ordinarios" : 1079
 ```
 
-Abrir [chat local](http://127.0.0.1:5173). La credencial local está en `.runtime/operator-token.txt`; copiarla en la pantalla de acceso. No compartirla ni subir `.runtime` al repositorio. El navegador solo conserva el token en memoria. Estos tokens son una integración inicial para operadores autorizados; la autenticación institucional debe sustituir su aprovisionamiento antes de extender el piloto.
+Estas cifras describen esa importación, no el fixture ni datos en vivo. Hay un registro sin fecha y 197 repeticiones adicionales de códigos respecto a los códigos distintos. Por eso los conteos representan **registros**, no envíos únicos, entregas ni ingresos. El filtro temporal usa la fecha de registro; los timestamps sin zona se conservan sin atribuirles una zona inventada.
 
-Ejemplos sobre **datos ficticios**:
+El desglose geográfico de seguimiento usa destino y su correspondencia exacta con un municipio único del directorio; no acredita oficina de admisión, custodia o entrega. Las coincidencias no únicas se agrupan como «Sin correspondencia».
 
-- «Consulta el seguimiento de DEMO-CERTI-001».
-- «¿Y su estado?» en la misma conversación.
-- «Lista las oficinas de La Paz».
-- «Cuenta registros por estado desde 2026-01-01 hasta 2027-01-01, fecha final exclusiva».
+Para preparar otra instalación institucional, seguir [operación](docs/operations.md) y [procedencia](docs/institutional-data.md). `scripts/import_backup.py <ruta-respaldo>` crea un destino nuevo y `scripts/connect_institutional.py` valida/configura la conexión. La ampliación de fichas, relaciones y fuentes contables tiene sus propias instrucciones. **La importación resumida inicial no habilita por sí sola todas esas ampliaciones.** `docs/source-schema.sql` es una referencia incompleta del esquema, no una migración ejecutable de instalación.
 
-Cada conversación tiene un código y una URL `/c/{id}`. El historial conserva preguntas y respuestas al recargar y reiniciar la API. Ver [conversaciones guardadas](docs/saved-chats.md).
+## Seguridad y límites
 
-Puedes indicar periodos como «todo octubre» o «el mes pasado». Los movimientos, cobros y registros de facturación se consultan por separado; ver [periodos y fuentes contables](docs/natural-periods-accounting.md).
+- La identidad y los permisos proceden del servidor. El modelo no concede acceso ni ejecuta SQL libre.
+- El catálogo usa SQL fijo parametrizado y validación AST; la autorización se comprueba antes de ejecutar y de nuevo en acceso a datos.
+- La cuenta postal consulta vistas autorizadas con transacciones de solo lectura; no debe ser dueña de objetos, superusuario ni tener `BYPASSRLS` o acceso directo a tablas originales.
+- El alcance implementado es `global_internal`. No ofrece aislamiento por cliente ni por sucursal.
+- Las operaciones personales requieren `personal_data` además de los permisos de su operación. Los resúmenes de la proyección mínima permanecen sin columnas personales.
+- Contraseñas, tokens y contenido de adjuntos quedan fuera de las fichas; los adjuntos se indican por presencia.
+- Las consultas acotan tiempo, filas y bytes. Los resúmenes y listados temporales admiten hasta 366 días; los resultados parciales se señalan.
+- Se mantiene un worker API y una generación concurrente del modelo. La cola, cancelaciones y métricas viven en memoria.
+- Auditoría JSON excluye prompts y filas. **SQLite sí contiene preguntas, respuestas y datos autorizados**, incluidos personales cuando corresponde: requiere protección y política de retención.
+- `.gitignore` excluye `.runtime/`, `.env`, claves, respaldos, bases locales, modelos, dependencias, cachés, logs y compilaciones. Las imágenes y animaciones de la interfaz se versionan.
 
-Después de un resumen mensual, «de EMS» o «y de certificados» conserva el periodo. «Todos los registros» muestra una lista paginada; ver [continuaciones por familia](docs/postal-followups.md).
+## Estructura del repositorio
 
-## Datos institucionales
+```text
+chatbot-correos/
+├── .github/workflows/checks.yml  # CI backend y frontend
+├── backend/
+│   ├── app/                     # Módulos, contratos, rutas y composición
+│   ├── tests/                   # Pruebas de comportamiento e integración
+│   ├── pyproject.toml
+│   └── uv.lock
+├── frontend/
+│   ├── public/                  # Identidad visual y animaciones
+│   ├── src/features/            # Acceso, chat y presentación de registros
+│   ├── src/shared/api/          # Cliente HTTP y parser SSE
+│   └── package-lock.json
+├── database/
+│   ├── fixtures/                # Datos sintéticos
+│   ├── views/                   # Proyecciones y ampliaciones
+│   └── policies/                # Rol de lectura y permisos
+├── config/                      # Manifiesto de modelo, catálogos y logging
+├── scripts/                     # Instalación, importación y comprobaciones
+├── evaluation/questions.json    # Corpus candidato pendiente de revisión
+├── deploy/                      # Plantillas Nginx y systemd
+├── docs/                        # Arquitectura, datos y operación detalladas
+├── models/                      # Descarga local; ignorada por Git
+└── .runtime/                    # Secretos, cluster e historial; ignorados
+```
 
-Las fichas de sucursales incluyen un inventario de 65 tablas relacionadas directa e indirectamente, con conteos y registros paginados. Consultar [alcance y relaciones de sucursales](docs/office-relations.md).
+## Pruebas y CI
 
-Consultar [diccionario y límites](docs/schema-notes.md), [operación](docs/operations.md) y [backend](backend/README.md). Aplicar, tras revisión de administración de datos, `database/views/001_projection.sql` y `database/policies/002_reader_role.sql` en una base aprobada. No alteran tablas operativas ni se ejecutan al iniciar la API.
-
-La conexión local actual se preparó mediante `scripts/import_backup.py` y `scripts/connect_institutional.py`. En otra instalación, usar el Python del entorno backend para ejecutar ambos scripts; requieren el cluster local preparado por `init_fixture.ps1`. `import_backup.py <ruta-respaldo>` crea un destino nuevo y rehúsa sobrescribirlo. `connect_institutional.py` valida datos/permisos y genera la configuración privada. No ejecutar otra importación sobre este destino ya preparado. Detalles en [operación](docs/operations.md).
-
-Para un servidor institucional distinto, configurar `CHATBOT_DATABASE_URL`, `CHATBOT_IDENTITIES_JSON`, `CHATBOT_MODEL_VERSION`, `CHATBOT_DATA_SNAPSHOT` si es una copia, y las variables documentadas en backend. El mapa actual autoriza al operador local; revisar el aprovisionamiento de usuarios antes de compartir la instalación. El script de arranque prefiere la configuración privada institucional cuando existe.
-
-Tarifas, ingresos, fechas de entrega, aislamiento por cliente/sucursal, Text-to-SQL libre y agente de varios pasos permanecen deshabilitados: el esquema no acredita sus reglas o requieren la evaluación condicional prevista en el plan. Se cuentan registros por familia, no envíos únicos. Las respuestas operativas se redactan con plantillas en español para preservar cifras y evitar una segunda generación.
-
-## Verificación
+Desde la raíz, con el fixture preparado y activo para las comprobaciones PostgreSQL:
 
 ```powershell
 ./scripts/check_fixture.ps1
 Set-Location backend
 uv run --frozen --python 3.12 pytest -q
+uv run --frozen python -m unittest discover -s ../scripts -p 'test_*.py'
 Set-Location ../frontend
 npm test
 npm run build
-npm audit
+npm audit --audit-level=high
+Set-Location ..
 ```
 
-Con API, inferencia y fixture activos, ejecutar desde la raíz `python scripts/check_local.py` para verificar ocho conversaciones y `python scripts/check_load.py` para una prueba breve de 1/2/5 solicitudes. Ambas herramientas rechazan modos ajenos al fixture. La prueba de percentiles se ejecuta con `python -m unittest discover -s scripts -p test_evaluate.py`.
+La comprobación previa a esta ampliación documental, realizada el **19 de octubre de 2026**, completó **135 pruebas backend, 10 de scripts y 6 de frontend**, además de la compilación. Es evidencia local de ese estado del código; no acredita aceptación de negocio ni ejecución satisfactoria del workflow remoto.
 
-Las pruebas PostgreSQL requieren el fixture local y se señalan como omitidas si no existe. El corpus `evaluation/questions.json` contiene 200 **candidatos sin revisión de negocio**, con la distribución del plan. No representa 200 pruebas aprobadas ni acredita los objetivos de exactitud 95/90 %. `scripts/evaluate.py` evalúa estados/latencia sin guardar mensajes o respuestas; `scripts/benchmark_inference.py` mide generación del modelo y permite comparar configuraciones. Ver [resultados y pendientes](docs/validation.md).
+La suite cubre contratos JSON/SSE, arquitectura, permisos, filtros, contexto, edición, borrado, persistencia, catálogo SQL y cancelación. Algunas integraciones PostgreSQL se omiten explícitamente cuando falta el fixture; revisar el resumen de ejecución antes de concluir que fueron comprobadas.
+
+Con API, inferencia y fixture activos:
+
+```powershell
+backend/.venv/Scripts/python.exe scripts/check_local.py
+backend/.venv/Scripts/python.exe scripts/check_load.py
+```
+
+Ambos scripts rechazan modos ajenos al fixture. Para la instalación institucional preparada, `scripts/check_institutional.py` contrasta resultados con PostgreSQL. Las comprobaciones de navegador en `scripts/check_*_ui.js` se ejecutan mediante Playwright CLI sobre una sesión de prueba; algunas requieren autenticación o respuestas simuladas. Ver [interfaz](docs/interface.md).
+
+El workflow [Checks](.github/workflows/checks.yml) ejecuta en `push` y `pull_request`: PostgreSQL sintético aislado, instalación con `uv.lock`, pytest/unittest, instalación con `npm ci`, pruebas web, build y auditoría npm. Usa Python 3.12 y Node.js 22.
+
+El corpus de evaluación contiene **200 candidatos sin revisión de negocio**. No equivale a 200 pruebas aprobadas. Los objetivos de exactitud operativa del 95 % y analítica del 90 % siguen pendientes de demostrar sobre preguntas revisadas. Las mediciones históricas de latencia, con muestras pequeñas, están en [validación](docs/validation.md); no son un compromiso de rendimiento.
+
+## Despliegue y operación
+
+Las plantillas de `deploy/` contemplan esta distribución:
+
+```mermaid
+flowchart LR
+    O[Operador en red institucional] -->|HTTPS 443| N[Nginx]
+    N --> W[Frontend compilado]
+    N -->|Proxy SSE sin buffering| A[FastAPI en loopback]
+    A --> L[llama.cpp CPU en loopback]
+    A --> P[(PostgreSQL de lectura)]
+    A --> H[(SQLite privado del servicio)]
+```
+
+1. Preparar usuario de servicio, Python y runtime CPU compatibles con el manifiesto. El instalador de binarios incluido está orientado a Windows; Linux requiere su propia compilación/configuración.
+2. Construir el frontend con `npm ci` y `npm run build`.
+3. Adaptar hostname, certificados, rutas y entornos de las plantillas. Validar Nginx con `nginx -t`.
+4. Mantener API/modelo en loopback y proteger PostgreSQL; para un servidor de datos remoto, usar red privada y TLS validado.
+5. Configurar identidades autorizadas, permisos de archivos y persistencia. La unidad API propone `/var/lib/correos-chat/chat-history.sqlite3` y un solo worker.
+6. Verificar consultas autorizadas, denegaciones, cancelación, reinicio y recuperación antes de habilitar el piloto.
+
+`/health` solo acredita vida del proceso. `/api/health` informa configuración y declara `dependencies_verified: false`; no sustituye una consulta controlada de readiness.
+
+Para respaldar el historial, detener la API y copiar el SQLite privado. Conservar configuración y manifiestos con sus controles de acceso. Para revertir, restaurar la revisión y lockfiles anteriores, reconstruir frontend y revisar compatibilidad de vistas con administración de datos. No sobrescribir ni borrar bases postales existentes. Más detalle en [operación y recuperación](docs/operations.md).
+
+## Solución de problemas
+
+| Síntoma | Revisión o acción |
+| --- | --- |
+| `uv`, Python o npm no se reconocen | Verificar instalación, versión y disponibilidad en `PATH`. Abrir otra terminal tras instalar. |
+| Falta `llama-server.exe` o el GGUF | Ejecutar `python scripts/setup_inference.py` y comprobar que finalice la verificación SHA-256. |
+| PostgreSQL no arranca | Revisar puerto `55432`, ruta de binarios y `.runtime/postgres-fixture.log`; no reinicializar un cluster existente. |
+| «Fixture already exists» | Omitir la inicialización; arrancar el cluster existente si está detenido. |
+| API no conecta o el navegador muestra error de proxy | Comprobar PostgreSQL, API en `8000`, modelo en `8081` y la terminal de cada servicio. |
+| Respuestas 401 o 403 | Volver a ingresar con la clave del entorno y revisar permisos del operador; una URL de chat no concede acceso. |
+| Se muestran datos ficticios en vez del respaldo | Revisar `/api/config` y el arranque elegido; `-Fixture` selecciona explícitamente datos ficticios. |
+| Faltan fichas personales o fuentes contables | Revisar permisos y proyecciones adicionales instaladas; el fixture básico no reproduce todas las ampliaciones institucionales. |
+| Cola llena, timeout o respuesta lenta | Revisar servicio del modelo, recursos y carga; mantener el despliegue de un worker documentado y medir antes de cambiar límites. |
+| No permite crear otro chat | Revisar `CHATBOT_MAX_SESSIONS`; eliminar un chat propio desde la interfaz libera un lugar. |
+| No permite borrar o editar un chat | Detener o esperar la respuesta activa y verificar propietario/permisos. |
+| Un conteo no coincide con envíos esperados | Revisar familia, rango final exclusivo, fecha de registro, duplicados y registros sin fecha. |
+
+## Alcance pendiente y documentación
+
+Tarifas, promesas de entrega, inferencia de causas, cálculo de ingresos/balances, SQL libre y un agente analítico de varios pasos permanecen fuera del alcance habilitado. Tampoco se declara aislamiento por cliente/sucursal, aprobación de producción ni autenticación institucional definitiva.
+
+Antes de ampliar el piloto quedan la revisión del diccionario y permisos con negocio, comparación de modelos, evaluación de exactitud, carga representativa, identidad institucional, retención del historial y validación de recuperación/despliegue.
+
+| Documento | Contenido |
+| --- | --- |
+| [Arquitectura](docs/architecture.md) | Fronteras, consultas, inferencia y persistencia. |
+| [Backend](backend/README.md) | Configuración y contratos técnicos. |
+| [Datos institucionales](docs/institutional-data.md) | Respaldo, conteos y comprobaciones de importación. |
+| [Esquema y límites](docs/schema-notes.md) | Semántica disponible y restricciones de datos. |
+| [Fichas completas](docs/full-details.md) | Proyección privada y permisos personales. |
+| [Relaciones de sucursales](docs/office-relations.md) | Catálogo e inventario de relaciones. |
+| [Periodos y contabilidad](docs/natural-periods-accounting.md) | Interpretación temporal y fuentes contables. |
+| [Familias y continuaciones](docs/postal-followups.md) | Agrupaciones, filtros, edición y paginación. |
+| [Conversaciones guardadas](docs/saved-chats.md) | Propiedad, persistencia, borrado y respaldo. |
+| [Interfaz](docs/interface.md) | Diseño, accesibilidad y verificación visual. |
+| [Validación](docs/validation.md) | Resultados históricos y límites de las mediciones. |
+| [Operación](docs/operations.md) | Cuenta de lectura, despliegue y reversión. |
+
+El manifiesto declara Apache-2.0 para el modelo y MIT para llama.cpp. Esas licencias corresponden a sus componentes; este repositorio no contiene actualmente un archivo `LICENSE` que establezca una licencia propia para todo el proyecto.
