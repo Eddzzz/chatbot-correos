@@ -11,6 +11,10 @@ pgpass.conf
 *.pfx
 *.dump
 *.backup
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 *.sqlite-journal
@@ -26,6 +30,10 @@ pgpass.conf
 **/.pytest_cache/
 **/.ruff_cache/
 **/.mypy_cache/
+**/.hypothesis/
+**/.tox/
+**/.nox/
+**/*.egg-info/
 *.py[cod]
 .coverage
 .coverage.*
@@ -36,6 +44,7 @@ htmlcov/
 **/dist/
 **/*.tsbuildinfo
 **/.vite/
+**/.cache/
 
 # Downloaded models
 *.gguf
@@ -47,8 +56,11 @@ models/
 output/
 test-results/
 playwright-report/
+blob-report/
 coverage/
 *.log
+*.tmp
+*.temp
 
 # Local editor and operating system files
 .idea/
