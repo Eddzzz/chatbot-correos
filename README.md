@@ -62,6 +62,8 @@ Cada conversación tiene un código y una URL `/c/{id}`. El historial conserva p
 
 Puedes indicar periodos como «todo octubre» o «el mes pasado». Los movimientos, cobros y registros de facturación se consultan por separado; ver [periodos y fuentes contables](docs/natural-periods-accounting.md).
 
+Después de un resumen mensual, «de EMS» o «y de certificados» conserva el periodo. «Todos los registros» muestra una lista paginada; ver [continuaciones por familia](docs/postal-followups.md).
+
 ## Datos institucionales
 
 Las fichas de sucursales incluyen un inventario de 65 tablas relacionadas directa e indirectamente, con conteos y registros paginados. Consultar [alcance y relaciones de sucursales](docs/office-relations.md).

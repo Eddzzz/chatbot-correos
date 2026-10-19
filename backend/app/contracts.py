@@ -26,6 +26,9 @@ class IntentDecision(StrictModel):
     end_date: str | None = Field(default=None, pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
     dimension: Literal['source', 'status', 'destination'] = 'status'
     detail: bool = False
+    office_personnel: bool = False
+    family: Literal['ems','certi','ordi','contrato','int'] | None = None
+    list_records: bool = False
     accounting_categories: list[Literal['movimientos','cobros','facturacion']] = Field(default_factory=lambda:['movimientos','cobros','facturacion'],min_length=1,max_length=3)
 
 
@@ -46,6 +49,7 @@ class ChatResponse(StrictModel):
     columns: list[str] = []
     source: str | None = None
     queried_at: datetime | None = None
+    record_browser: dict[str,Any] | None = None
 
 
 class ServiceError(Exception):

@@ -13,6 +13,8 @@ TEMPLATES = {
 }
 for dimension in ('source', 'status', 'destination'):
     TEMPLATES['summary_' + dimension] = f'SELECT {dimension}, COUNT(*) AS total FROM chatbot.v_tracking WHERE registered_at >= %(start_date)s AND registered_at < %(end_date)s AND %(access_scope)s = \'global_internal\' GROUP BY {dimension} ORDER BY total DESC LIMIT %(limit)s'
+    TEMPLATES['summary_'+dimension] = TEMPLATES['summary_'+dimension].replace('AND %(access_scope)s', 'AND (CAST(%(family)s AS TEXT) IS NULL OR source = %(family)s) AND %(access_scope)s')
+TEMPLATES['summary_records'] = "SELECT source, tracking_code, status, origin, destination, registered_at, updated_at FROM chatbot.v_tracking WHERE registered_at >= %(start_date)s AND registered_at < %(end_date)s AND (CAST(%(family)s AS TEXT) IS NULL OR source = %(family)s) AND %(access_scope)s = 'global_internal' ORDER BY registered_at DESC, source, shipment_id LIMIT %(page_limit)s OFFSET %(offset)s"
 
 TEMPLATES['tracking_details'] = TEMPLATES['tracking'].replace('source, tracking_code, status, origin, destination, registered_at, updated_at', 'source, tracking_code, details').replace('chatbot.v_tracking ', 'chatbot.v_tracking_details ').replace('registered_at DESC', 'source, tracking_code')
 TEMPLATES['offices_details'] = TEMPLATES['offices'].replace('office_id, codigo_sucursal, municipality, department, phone', 'office_id, department, details').replace('chatbot.v_offices ', 'chatbot.v_office_details ').replace('department, municipality, office_id', 'department, office_id')

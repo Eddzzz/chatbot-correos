@@ -13,7 +13,8 @@ class ToolRegistry:
 
     async def execute(self, intent: IntentDecision, context: AccessContext):
         authorize_operation(context, 'summary' if intent.operation=='accounting' else intent.operation)
-        if intent.detail or intent.operation=='accounting':
+        detail = intent.detail or intent.office_personnel
+        if (detail and intent.operation in {'tracking','offices'}) or intent.operation=='accounting':
             authorize_details(context)
         if intent.operation == 'tracking':
             if not intent.tracking_code:
@@ -25,7 +26,7 @@ class ToolRegistry:
             query = plan_analysis(intent)
         else:
             raise ServiceError('unsupported', 'Esta operación no está disponible.', 422)
-        if intent.detail and intent.operation in {'tracking', 'offices'}:
+        if detail and intent.operation in {'tracking', 'offices'}:
             query = query.model_copy(update={'template': query.template + '_details'})
         if intent.operation=='accounting':
             counts = await self.reader.run_read(QuerySpec(template='summary_accounting_counts_details',parameters=query.parameters),context)
@@ -35,7 +36,32 @@ class ToolRegistry:
             totals = {category:0 for category in intent.accounting_categories}
             totals.update({row['category']:row['total'] for row in counts.rows})
             return replace(result,totals=totals)
-        return await self.reader.run_read(query, context)
+        result = await self.reader.run_read(query, context)
+        if intent.operation=='offices' and intent.office_personnel:
+            rows=[]
+            limited=result.truncated
+            for office in result.rows:
+                details=office.get('details',{})
+                fields=details.get('campos',{})
+                personnel=details.get('relaciones',{}).get('usuarios',{})
+                limited=limited or personnel.get('truncado',False)
+                for person in personnel.get('registros',[]):
+                    data=person.get('campos',{})
+                    rows.append({'nombre':data.get('name'),'correo_electronico':data.get('email'),'documento_identidad':data.get('ci'),'ciudad':data.get('ciudad'),'sucursal':fields.get('municipio'),'departamento':office.get('department')})
+            return replace(result,rows=rows,truncated=limited)
+        return result
+
+    async def postal_records(self,start_date,end_date,family,offset,limit,context):
+        authorize_operation(context,'summary')
+        if offset<0 or offset>10000000 or not 1<=limit<=20:
+            raise ServiceError('invalid_page','La página solicitada no es válida.',422)
+        query=plan_analysis(IntentDecision(operation='summary',start_date=start_date,end_date=end_date,family=family))
+        result=await self.reader.run_read(QuerySpec(template='summary_records',parameters={**query.parameters,'offset':offset,'page_limit':limit+1}),context)
+        rows=result.rows[:limit]
+        more=result.truncated or len(result.rows)>limit
+        if not rows and result.truncated:
+            raise ServiceError('record_too_large','Un registro supera el límite de respuesta.',422)
+        return {'rows':rows,'offset':offset,'next_offset':offset+len(rows) if more else None,'source':result.source,'queried_at':result.queried_at,'truncated':more}
 
     async def related_tables(self, office_id: int, context: AccessContext):
         authorize_operation(context, 'offices')

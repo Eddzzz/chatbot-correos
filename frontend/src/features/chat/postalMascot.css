@@ -1,0 +1,15 @@
+.message.assistant>.postal-thinking{grid-column:1 / -1}
+.postal-thinking{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:28px;padding:16px 0 24px;min-width:0}
+.thinking-frames{width:240px;max-width:100%;aspect-ratio:1;flex-shrink:0;background-image:url('/cartero-thinking-v2.png');background-repeat:no-repeat;background-size:600% 400%;background-position:0 0}
+.thinking-frames video{display:block;width:100%;height:100%;opacity:0}
+.thinking-frames:has(video[data-playing=true]){background-image:none}
+.thinking-frames video[data-playing=true]{opacity:1}
+.thinking-copy{display:flex;flex-direction:column;gap:10px;max-width:240px;color:var(--muted)}
+.thinking-copy strong{font-size:17px;color:var(--ink);font-weight:650;line-height:1.4}
+.thinking-copy>span{font-size:13px;line-height:1.6}
+.thinking-dots{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}
+.thinking-dots i{width:4px;height:4px;background:var(--postal-blue);border-radius:50%;animation:thinking-dot 1.2s ease-in-out infinite}
+.thinking-dots i:nth-child(2){animation-delay:.2s}.thinking-dots i:nth-child(3){animation-delay:.4s}
+@keyframes thinking-dot{50%{opacity:.25;transform:translateY(-3px)}}
+@media(max-width:767px){.postal-thinking{flex-direction:column;gap:4px;padding:8px 0 20px}.thinking-frames{width:220px}.thinking-copy{text-align:center;gap:6px}.thinking-copy strong{font-size:16px}.thinking-copy>span{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.thinking-frames:has(video[data-playing=true]){background-image:url('/cartero-thinking-v2.png')}.thinking-frames video{visibility:hidden}.thinking-dots i{animation:none}}

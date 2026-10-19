@@ -1,6 +1,7 @@
 import asyncio
 import json
 from uuid import uuid4
+from typing import Literal
 from fastapi import FastAPI, Header, Request, Response, Path, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.contracts import ChatRequest, ServiceError
@@ -48,6 +49,11 @@ def register_routes(app: FastAPI, settings, identity, conversation, audit):
     @app.get('/api/offices/{office_id}/relations')
     async def office_tables(office_id: int = Path(gt=0), authorization: str | None = Header(default=None)):
         return await conversation.office_related_tables(office_id, principal(authorization))
+
+    @app.get('/api/postal-records')
+    async def postal_records(response:Response,start_date:str=Query(pattern=r'^\d{4}-\d{2}-\d{2}$'),end_date:str=Query(pattern=r'^\d{4}-\d{2}-\d{2}$'),family:Literal['ems','certi','ordi','contrato','int']|None=None,offset:int=Query(default=0,ge=0,le=10000000),limit:int=Query(default=10,ge=1,le=20),authorization:str|None=Header(default=None)):
+        response.headers['Cache-Control']='no-store'
+        return await conversation.postal_records(start_date,end_date,family,offset,limit,principal(authorization))
 
     @app.get('/api/offices/{office_id}/relations/{table_name}')
     async def office_records(office_id: int = Path(gt=0), table_name: str = Path(pattern=r'^[a-z_]+$', max_length=80), offset: int = Query(default=0, ge=0, le=10000000), limit: int = Query(default=10, ge=1, le=20), authorization: str | None = Header(default=None)):

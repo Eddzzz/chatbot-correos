@@ -12,11 +12,11 @@ from app.conversation.public import Conversation
 TOKEN = 'details-test-token-0001'
 
 
-@pytest.mark.parametrize('followup_message', ['dame compelto lo datos completos', 'datos compeltos', 'datos completos', 'muéstrame toda su información', 'más detalles'])
+@pytest.mark.parametrize('followup_message', ['dame compelto lo datos completos', 'datos compeltos', 'datos completos', 'muéstrame toda su información', 'más detalles', 'dame todos los datos de la oficina de la paz', 'muéstrame toda la información de la sucursal de La Paz'])
 def test_complete_followup_keeps_the_previously_confirmed_office_and_uses_detail_tool(followup_message):
     class Model:
         async def interpret(self, message, context=None):
-            return IntentDecision(operation='offices', department='La Paz') if 'sucursal' in message else IntentDecision(operation='outside')
+            return IntentDecision(operation='offices', department='La Paz') if 'sucursal' in message or 'oficina' in message else IntentDecision(operation='outside')
 
     class Reader:
         async def run_read(self, query, context):
@@ -33,6 +33,7 @@ def test_complete_followup_keeps_the_previously_confirmed_office_and_uses_detail
     with TestClient(create_app(settings, reader=Reader(), model=Model())) as client:
         headers = {'Authorization': 'Bearer ' + TOKEN}
         first = client.post('/api/chat', headers=headers, json={'message': 'dame los datos e la sucursal e la paz'}).json()
+        assert 'details' not in first['rows'][0]
         followup = client.post('/api/chat', headers=headers, json={'message': followup_message, 'session_id': first['session_id']})
         assert followup.status_code == 200
         assert followup.json()['status'] == 'answer'
@@ -83,7 +84,7 @@ def test_detail_request_never_extends_to_a_new_named_resource():
     assert not Conversation.is_detail_followup('datos completos de usuarios y contraseñas')
 
 
-@pytest.mark.parametrize('message', ['datos completos', 'datos compeltos'])
+@pytest.mark.parametrize('message', ['datos completos', 'datos compeltos', 'dame todos los datos de la oficina de la paz'])
 def test_full_details_require_an_explicit_personal_permission(message):
     settings = Settings(demo_mode=True, identities_json=json.dumps({TOKEN: {'user_id': 'operator', 'permissions': ['internal_data', 'offices'], 'scope': ['global_internal']}}))
     with TestClient(create_app(settings)) as client:

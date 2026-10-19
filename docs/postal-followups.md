@@ -1,0 +1,13 @@
+# Familias postales y registros individuales
+
+Después de consultar un periodo, «de EMS», «y de certificados», «solo contratos» o «de ordinarios» conserva el mes y año confirmados y cambia la familia consultada. El filtro se aplica tanto al conteo como a los registros individuales. Las familias disponibles son EMS, certificados, ordinarios, contratos e internacionales. Si falta un periodo previo, el chat pregunta qué mes se necesita. Si se mencionan varias familias a la vez, pide escoger una.
+
+«Todos los registros» habilita una lista paginada además del conteo. «De EMS» también permite abrir la lista de esa familia, incluso cuando la respuesta anterior solo contenía grupos. Las páginas permiten recorrer todos los registros disponibles del periodo, respetando los límites por respuesta. El resumen no se presenta como si fuera una lista de registros individuales.
+
+La intención, las fechas, la familia y la disponibilidad de la lista se conservan en el historial SQLite. Recargar el chat recupera los filtros de esa respuesta. Una nueva consulta explícita sin familia limpia el filtro anterior; una continuación de periodo conserva la familia confirmada. Los filtros no se toman libremente del modelo: la familia debe estar mencionada o confirmada en una continuación.
+
+La API autenticada `GET /api/postal-records` recibe `start_date`, `end_date`, `family` opcional, `offset` y `limit`. Exige `summary`, `internal_data` y alcance global interno. Acepta entre 1 y 20 registros por página y un periodo de hasta 366 días. Consulta únicamente la proyección aprobada `v_tracking`, con SQL fijo parametrizado y límites de filas/bytes. Ordena por fecha, familia e identificador de origen para mantener una paginación estable. No requiere permiso personal porque muestra la proyección mínima de seguimiento, sin remitentes ni destinatarios.
+
+La respuesta contiene código de seguimiento, estado, origen, destino y fechas. `next_offset` indica la siguiente página o `null` al terminar; el desplazamiento avanza según las filas efectivamente devueltas. El navegador conserva los desplazamientos anteriores para volver correctamente cuando actúan los límites de tamaño. Los timestamps sin zona se muestran como fueron registrados, sin convertirlos a una zona horaria inferida.
+
+En este respaldo, junio de 2026 tiene 1.436 registros EMS. Son registros de origen; el conteo no acredita envíos únicos ni fecha de entrega. El filtro temporal se aplica a la fecha de registro. Pruebas: `backend/tests/test_family_followups.py` y navegación real con la frase del usuario, cambio de familias y páginas siguiente/anterior.

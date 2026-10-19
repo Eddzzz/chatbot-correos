@@ -1,5 +1,6 @@
-export type Result = {request_id?: string; status?: string; answer?: string; rows?: Record<string, unknown>[]; columns?: string[]; source?: string; queried_at?: string};
-export type Message = Result & {role: 'user' | 'assistant'; content: string};
+export type PostalRecordFilters = {start_date:string;end_date:string;family:string|null};
+export type Result = {request_id?: string; status?: string; answer?: string; rows?: Record<string, unknown>[]; columns?: string[]; source?: string; queried_at?: string; record_browser?:PostalRecordFilters|null};
+export type Message = Result & {role: 'user' | 'assistant'; content: string; response_seconds?: number};
 export type Session = {session_id: string; title: string; updated_at?: string};
 export async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {...init, headers: {...init?.headers, Authorization:`Bearer ${token}`, 'Content-Type':'application/json'}});

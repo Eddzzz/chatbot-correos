@@ -33,6 +33,7 @@ Rutas autenticadas con `Authorization: Bearer ...`:
 * `POST /api/chat` y `POST /api/chat/stream`: `{ "message":"...", "session_id": null }`.
 * SSE: `request_started`, `status`, `answer_chunk`, `completed`, `error`; todos con `request_id`. Primer evento incluye `session_id`; completed incluye respuesta y evidencia. Texto se fragmenta después de comprobar los resultados, nunca durante generación no verificada.
 * `GET /api/sessions`, `GET /api/sessions/{id}` y alias `/history`: exclusivamente sesiones propias.
+* `GET /api/postal-records`: registros mínimos por periodo/familia, autenticados con permisos de resumen; paginación de 1 a 20 filas y límites de bytes. Ver [continuaciones por familia](../docs/postal-followups.md).
 * `POST /api/requests/{request_id}/cancel`: exclusivamente solicitud propia en curso. Cancela tarea, HTTP de inferencia y ejecución PostgreSQL asíncrona.
 * `GET /api/config` público indica modo; no revela DSN, tokens ni esquema.
 

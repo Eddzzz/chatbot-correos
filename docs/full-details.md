@@ -8,11 +8,17 @@ Después de «dame los datos de la sucursal de La Paz», escribir «dame los dat
 
 Sin contexto, «datos completos» pide sucursal o código. «Dame el último dato guardado» pide precisar tabla/tipo; no se trata como tema ajeno ni se interpreta como un último registro global entre tablas sin relación. Una petición con otro departamento o código se interpreta por separado y no reutiliza silenciosamente el anterior.
 
+Las peticiones con un recurso explícito, como «dame todos los datos de la oficina de La Paz» o «toda la información de la sucursal de La Paz», también activan la ficha completa, aunque el modelo clasifique inicialmente una consulta resumida. Se mantienen los filtros explícitos y los permisos de acceso a detalles.
+
 Las continuaciones toleran pequeñas erratas en palabras de presentación, como «datos compeltos», y referencias como «más detalles» o «muéstrame toda su información». No se corrigen códigos, fechas ni nombres de lugares. Una solicitud incompleta «sucursales y envíos» recibe una aclaración que conserva el departamento ya confirmado y solicita el código del envío. La aclaración no borra el último recurso confirmado; «más detalles» puede retomarlo. Estas reglas no unen envíos a sucursales por coincidencia de ciudad.
 
 La interfaz muestra campos y relaciones en secciones desplegables, con valores ausentes explícitos. Cuando una relación contiene más de 50 registros se indica `truncado=true`, con límite 50; no se afirma que la lista sea exhaustiva. Si una ficha supera el límite total de bytes, se pide reducir la información y no se informa falsamente que no hay registros.
 
 ## Cobertura
+
+Las continuaciones que solo cambian el departamento («ahorita las de Santa Cruz», «ahorta las de santa cruz», «y de Pando») conservan la consulta anterior de sucursales: si se estaba consultando personal, mantienen la tabla de personal. El contexto se recupera del historial al reabrir el chat y se mantiene aunque un departamento no tenga resultados. Una petición explícita de otro recurso cambia el tema. Los chats guardados afectados por el clasificador anterior recuperan el tema de personal desde la última petición explícita, sin reescribir respuestas antiguas.
+
+«Dame qué personal hay en la sucursal de Beni en tablas» consulta directamente el personal asignado, sin tratarlo como un tema ajeno ni devolver toda la ficha de la oficina. También se reconocen empleados, funcionarios, trabajadores y usuarios. La tabla muestra nombre, correo, documento de identidad, ciudad, sucursal y departamento disponibles, sin IDs internos. Usa la relación directa `users.sucursal_id` de la ficha autorizada y exige `offices`, `internal_data`, `personal_data` y alcance interno. Si falta el departamento se solicita; «y el personal en tablas» conserva el departamento previamente confirmado. Un departamento nuevo sustituye al anterior. Las listas parciales se identifican como tales y los resultados quedan en el historial privado con sus permisos.
 
 Las tablas y columnas admitidas están en `config/details_catalog.json`. La ampliación comprende las sucursales, cinco familias de paquetes y los catálogos/registros relacionados revisados: usuarios, empresas, estados, servicios, ventanillas, referencias tarifarias, eventos, carteros, bitácoras, malencaminados, formularios y preregistros. No se habilita un explorador SQL arbitrario de las 122 tablas del respaldo.
 

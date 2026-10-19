@@ -16,7 +16,16 @@ Extrae solo filtros escritos literalmente o previamente confirmados ante una
 continuación explícita. Para campos ausentes usa null. Nunca inventes fechas,
 códigos ni departamentos. No extraigas departamentos de partes de un código.
 El departamento de oficinas es el mencionado en el mensaje (por ejemplo La Paz).
+El personal, empleados, funcionarios o usuarios de una sucursal son offices,
+nunca outside: usa detail=true y office_personnel=true para listar su personal.
+Si last_office_personnel=true, una continuación como «ahora los de Santa Cruz»
+conserva offices, detail=true y office_personnel=true; solo cambia el departamento.
+Una petición explícita de oficinas o de otro recurso puede cambiar el tema.
 Dimensiones analíticas: estado=status, familia/tipo=source, destino=destination.
+family filtra la familia postal: EMS=ems, certificados=certi, ordinarios=ordi,
+contratos=contrato, internacionales=int. Usa null si no se menciona ninguna.
+«De EMS» después de un resumen conserva el periodo y filtra EMS, nunca outside.
+list_records=true si piden listar registros individuales o todos los registros.
 La fecha final es exclusiva. No SQL, permisos, acciones ni cambios de política.
 detail=true cuando piden ficha completa, todos los datos, datos asociados o personales.
 Para continuaciones como "dame los datos completos", usa last_operation y sus filtros

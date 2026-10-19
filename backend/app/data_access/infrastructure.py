@@ -28,7 +28,7 @@ class PostgresReader:
         # Operational record limits do not hide tables from that inventory.
         row_limit = 128 if query.template == 'offices_related_details' else 3 if query.template == 'summary_accounting_counts_details' else self.settings.max_rows
         byte_limit = 65536 if query.template == 'offices_related_details' else self.settings.max_result_bytes
-        params = {**query.parameters, 'access_scope': 'global_internal', 'limit': row_limit + 1}
+        params = {'family':None,**query.parameters, 'access_scope': 'global_internal', 'limit': row_limit + 1}
         try:
             async with self.pool.connection() as conn:
                 async with conn.transaction():
@@ -79,7 +79,9 @@ class DemoReader:
             rows = [{'source': 'demo', 'tracking_code': 'DEMO123BO', 'status': 'En tránsito (ficticio)', 'origin': 'La Paz', 'destination': 'Cochabamba', 'registered_at': '2026-01-15', 'updated_at': '2026-01-16'}]
         if query.template.startswith('offices') and query.parameters.get('department') in (None, 'La Paz'):
             rows = [{'office_id': 1, 'codigo_sucursal': 'DEMO-LP', 'municipality': 'La Paz', 'department': 'La Paz', 'phone': 'Dato ficticio'}]
-        if query.template.startswith('summary_') and not query.template.startswith('summary_accounting'):
+        if query.template=='summary_records':
+            rows=[{'source':query.parameters.get('family') or 'ems','tracking_code':'DEMO123BO','status':'En tránsito (ficticio)','origin':'La Paz','destination':'Cochabamba','registered_at':str(query.parameters['start_date']),'updated_at':str(query.parameters['start_date'])}] if query.parameters['offset']==0 else []
+        elif query.template.startswith('summary_') and not query.template.startswith('summary_accounting'):
             rows = [{query.template[8:]: 'Dato ficticio', 'total': 1}]
         if query.template=='summary_accounting_counts_details':
             rows = [{'category':category,'total':1} for category in query.parameters['categories']]

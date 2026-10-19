@@ -84,4 +84,4 @@ def plan_analysis(intent: IntentDecision) -> QuerySpec:
         raise ServiceError('clarify', 'El periodo debe tener entre 1 y 366 días; la fecha final es exclusiva.', 422)
     if intent.operation=='accounting':
         return QuerySpec(template='summary_accounting_details',parameters={'start_date':start,'end_date':end,'categories':intent.accounting_categories})
-    return QuerySpec(template='summary_' + intent.dimension, parameters={'start_date': start, 'end_date': end})
+    return QuerySpec(template='summary_' + intent.dimension, parameters={'start_date': start, 'end_date': end,'family':intent.family})
