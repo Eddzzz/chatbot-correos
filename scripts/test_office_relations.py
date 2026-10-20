@@ -4,7 +4,7 @@ import uuid
 import json
 import re
 
-from import_backup import ROOT, DATABASE
+from import_backup import ROOT
 import upgrade_office_relations as upgrade
 
 
@@ -36,7 +36,7 @@ class ClosureTest(unittest.TestCase):
         original = upgrade.SCHEMA
         try:
             upgrade.SCHEMA = schema
-            with psycopg.connect(host='127.0.0.1',port=55432,dbname=DATABASE,
+            with psycopg.connect(host='127.0.0.1',port=55432,dbname='correos_sandbox_fixture',
                                  user='fixture_admin',password=password) as connection:
                 connection.execute(f'''CREATE SCHEMA {schema};
                     CREATE TABLE {schema}.sucursales(id bigint);

@@ -2,7 +2,7 @@
 import unittest
 import uuid
 
-from import_backup import DATABASE, ROOT
+from import_backup import ROOT
 
 
 @unittest.skipUnless((ROOT / '.runtime/initdb-password').exists(),
@@ -13,7 +13,7 @@ class AccountingViewTest(unittest.TestCase):
         from psycopg import sql
 
         password = (ROOT / '.runtime/initdb-password').read_text().strip()
-        connection = psycopg.connect(host='127.0.0.1', port=55432, dbname=DATABASE,
+        connection = psycopg.connect(host='127.0.0.1', port=55432, dbname='correos_sandbox_fixture',
                                       user='fixture_admin', password=password)
         sources = [
             ('chatbot_relations_source', 'cashier_flow_receivable_movements', 'cobrado_at'),
@@ -21,6 +21,24 @@ class AccountingViewTest(unittest.TestCase):
             ('chatbot_accounting_source', 'facturas', 'created_at'),
         ]
         try:
+            # Build the sources inside this transaction, never in the institutional copy.
+            # The fixture login exercises the same view grants as the institutional login.
+            connection.execute('''
+                CREATE SCHEMA chatbot_relations_source;
+                CREATE SCHEMA chatbot_accounting_source;
+                REVOKE ALL ON SCHEMA chatbot_relations_source, chatbot_accounting_source
+                    FROM PUBLIC, chatbot_reader, chatbot_fixture;
+                CREATE TABLE chatbot_relations_source.cashier_flow_receivable_movements (
+                    id bigint PRIMARY KEY, cobrado_at timestamp, servicio text,
+                    cobro_activo boolean, monto numeric, cantidad_paquetes numeric);
+                CREATE TABLE chatbot_relations_source.cashier_flow_receivable_collections (
+                    id bigint PRIMARY KEY, cobrado_at timestamp, servicio text,
+                    cobro_activo boolean, monto_cobrado numeric);
+                CREATE TABLE chatbot_accounting_source.facturas (
+                    id bigint PRIMARY KEY, created_at timestamp, updated_at timestamp);
+            ''')
+            view_sql = (ROOT / 'database/views/005_accounting.sql').read_text(encoding='utf-8')
+            connection.execute(view_sql.replace('chatbot_institutional', 'chatbot_fixture'))
             connection.execute('SAVEPOINT accounting_test')
             # Random negative bigint identifiers cannot collide silently: check all
             # three copied sources before inserting, and never delete source rows.
@@ -45,8 +63,8 @@ class AccountingViewTest(unittest.TestCase):
             connection.execute('''UPDATE chatbot_relations_source.cashier_flow_receivable_collections
                 SET monto_cobrado=%s WHERE id=ANY(%s)''', (exact_amount, identifiers))
 
-            connection.execute('SET LOCAL ROLE chatbot_institutional')
-            for role in ('chatbot_institutional', 'chatbot_reader'):
+            connection.execute('SET LOCAL ROLE chatbot_fixture')
+            for role in ('chatbot_fixture', 'chatbot_reader'):
                 for schema in ('chatbot_accounting_source', 'chatbot_relations_source'):
                     accessible = connection.execute(
                         "SELECT has_schema_privilege(%s,%s,'USAGE')", (role, schema)).fetchone()[0]
