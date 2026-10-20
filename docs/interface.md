@@ -8,6 +8,7 @@ La interfaz toma el azul `#20539a` y el amarillo `#fecc36` de [Correos de Bolivi
 - Diseño adaptable, navegación por teclado y respeto de `prefers-reduced-motion`.
 - Cartero de la referencia del usuario dentro del mensaje del asistente mientras se genera la respuesta, con una secuencia de 24 poses pensando creada con ImageGen, con transiciones a 24 fps (96 cuadros en cuatro segundos). Se muestra a 240 px (220 px en móvil), sin texto visible ni puntos de carga; conserva una etiqueta accesible para lectores de pantalla. Desaparece al terminar, fallar o detener la consulta. Usa `frontend/public/cartero-thinking-v2-24fps.webm`, con transparencia y reproducción en bucle. Conserva `cartero-thinking-v2.png` como pose estática al solicitar movimiento reducido o si no puede reproducirse el vídeo.
 - Se conservan autenticación, historial, consultas, fuentes y visualización de registros.
+- El acceso usa usuario y contraseña. La sesión se restaura al recargar, el pie lateral muestra la cuenta activa y cada cuenta recupera su propio historial. Cerrar sesión limpia los mensajes, borradores y búsquedas; los cambios de cuenta se sincronizan entre pestañas.
 
 Validación: `npm test` y `npm run build` desde `frontend`. Con Vite activo y un navegador de Playwright CLI abierto, ejecutar desde la raíz:
 
@@ -16,6 +17,8 @@ npx --yes --package @playwright/cli playwright-cli run-code --filename=scripts/c
 ```
 
 Esta comprobación visita el acceso, verifica cambio y persistencia de tema, formulario vacío, ausencia de desbordamiento a 320/390/768/1440 px y movimiento reducido. No necesita credenciales. Reinicia la página de prueba; las consultas reales requieren los servicios locales documentados en README.
+
+`scripts/check_auth_tabs_ui.js` comprueba con cuentas simuladas el cierre de sesión y cambio de usuario entre pestañas, la limpieza de borradores y búsquedas, y la restauración al volver a una pestaña suspendida. `scripts/check_login_ui.js` comprueba el login real y el aislamiento de dos cuentas aprovisionadas; requiere el archivo privado `.runtime/login-check.json` descrito al inicio del script y elimina únicamente el chat que crea durante la comprobación.
 
 `playwright-cli --session mascot run-code --filename=scripts/check_mascot_ui.js` verifica el cartero con respuestas simuladas: espera, éxito, error y cancelación, ambos temas, movimiento reducido y ubicación dentro de la respuesta, tamaño mínimo de 200 px y ausencia de solapamiento con el compositor de 320 a 1440 px. Ejecutar en una sesión de navegador de prueba abierta.
 

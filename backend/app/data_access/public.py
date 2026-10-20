@@ -6,6 +6,7 @@ import sqlglot
 from sqlglot import exp
 from app.contracts import AccessContext, StrictModel
 from app.data_access.history import HistoryStore
+from app.data_access.auth import AuthStore
 
 TEMPLATES = {
     'tracking': 'SELECT source, tracking_code, status, origin, destination, registered_at, updated_at FROM chatbot.v_tracking WHERE tracking_code = %(tracking_code)s AND %(access_scope)s = \'global_internal\' ORDER BY registered_at DESC LIMIT %(limit)s',

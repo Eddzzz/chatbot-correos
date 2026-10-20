@@ -10,9 +10,14 @@ async (page) => {
       ? {status:500,body:'Unavailable'}
       : {contentType:'text/event-stream',body:'event: completed\ndata: {"answer":"La oficina se encuentra en La Paz.","status":"answer"}\n\n'});
   });
+  await page.route('**/api/auth/**', route => {
+    const path=new URL(route.request().url()).pathname;
+    return route.fulfill({status:path==='/api/auth/me'?401:200,json:path==='/api/auth/me'?{error:{message:'Sin sesión'}}:path==='/api/auth/logout'?{logged_out:true}:{user:{user_id:'ui-test-user',username:'ui-test-account',display_name:'Cuenta de prueba'}}});
+  });
   await page.goto('http://127.0.0.1:5173/');
-  await page.getByLabel('Clave de acceso', {exact:true}).fill('test-only');
-  await page.getByRole('button', {name:'Iniciar conversación'}).click();
+  await page.getByLabel('Usuario', {exact:true}).fill('test-only');
+  await page.getByLabel('Contraseña',{exact:true}).fill(await page.evaluate(()=>crypto.randomUUID()));
+  await page.getByRole('button', {name:'Iniciar sesión'}).click();
   await page.getByRole('button', {name:/Oficinas y sucursales/}).click();
   const timing = page.locator('.response-time').first();
   await timing.waitFor();

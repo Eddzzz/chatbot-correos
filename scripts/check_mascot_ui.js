@@ -12,9 +12,14 @@ async (page) => {
       body:'event: completed\ndata: {"answer":"Tu consulta está lista.","status":"answer"}\n\n'
     }).catch(() => {});
   });
+  await page.route('**/api/auth/**', route => {
+    const path=new URL(route.request().url()).pathname;
+    return route.fulfill({status:path==='/api/auth/me'?401:200,json:path==='/api/auth/me'?{error:{message:'Sin sesión'}}:path==='/api/auth/logout'?{logged_out:true}:{user:{user_id:'ui-test-user',username:'ui-test-account',display_name:'Cuenta de prueba'}}});
+  });
   await page.goto('http://127.0.0.1:5173/');
-  await page.getByLabel('Clave de acceso', {exact:true}).fill('test-only');
-  await page.getByRole('button', {name:'Iniciar conversación'}).click();
+  await page.getByLabel('Usuario', {exact:true}).fill('test-only');
+  await page.getByLabel('Contraseña',{exact:true}).fill(await page.evaluate(()=>crypto.randomUUID()));
+  await page.getByRole('button', {name:'Iniciar sesión'}).click();
   const mascot = page.locator('.message.assistant .postal-thinking');
   check(await mascot.count() === 0, 'Loader visible while idle');
   check(await page.locator('.composer-dock,.postal-mascot').count() === 0, 'Corner mascot remains');

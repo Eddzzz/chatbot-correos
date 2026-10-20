@@ -4,7 +4,7 @@ from app.api import register_routes
 from app.audit.public import AuditSink
 from app.conversation.public import Conversation
 from app.data_access.infrastructure import DemoReader, PostgresReader, UnconfiguredReader
-from app.identity.public import IdentityResolver
+from app.identity.public import BrowserAuth, IdentityResolver
 from app.inference.public import DemoInterpreter, LocalLanguageModel
 from app.operations.public import ToolRegistry
 from app.settings import Settings
@@ -12,7 +12,8 @@ from app.settings import Settings
 
 def create_app(settings: Settings | None = None, *, reader=None, model=None):
     settings = settings or Settings()
-    identity = IdentityResolver(settings.identities_json)
+    browser_auth = BrowserAuth(settings)
+    identity = IdentityResolver(settings.identities_json, browser_auth)
     reader = reader or (DemoReader() if settings.demo_mode else PostgresReader(settings) if settings.database_url else UnconfiguredReader())
     model = model or (DemoInterpreter() if settings.demo_mode else LocalLanguageModel(settings))
     audit = AuditSink()
@@ -30,5 +31,6 @@ def create_app(settings: Settings | None = None, *, reader=None, model=None):
 
     app = FastAPI(title='Correos Bolivia · consulta interna', lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.conversation = conversation
+    app.state.browser_auth = browser_auth
     register_routes(app, settings, identity, conversation, audit)
     return app

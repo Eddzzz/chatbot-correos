@@ -15,6 +15,7 @@ El modelo interpreta la intención y los filtros. El servidor valida permisos, e
 - [Requisitos](#requisitos)
 - [Instalación desde cero](#instalación-desde-cero)
 - [Arranque y parada](#arranque-y-parada)
+- [Usuarios y sesiones](#usuarios-y-sesiones)
 - [Configuración](#configuración)
 - [API y contratos](#api-y-contratos)
 - [Datos y procedencia](#datos-y-procedencia)
@@ -29,6 +30,7 @@ El modelo interpreta la intención y los filtros. El servidor valida permisos, e
 
 | Área | Comportamiento implementado |
 | --- | --- |
+| Acceso | Cuentas administradas con usuario y contraseña, cookie HttpOnly y cierre de sesión con revocación. |
 | Seguimiento | Consulta por código exacto, estado, origen, destino y fechas registradas; un código puede corresponder a varios registros. |
 | Sucursales | Directorio por departamento, fichas completas y navegación de relaciones disponibles. |
 | Personal | Consultas de personal relacionado con una sucursal, sujetas a permisos de datos personales. |
@@ -56,6 +58,7 @@ flowchart TB
     U[Operador interno] --> UI[React y TypeScript]
     UI -->|Mismo origen: HTTP y SSE| API[FastAPI]
     API --> ID[Identidad y permisos]
+    ID --> AU[(SQLite privado: cuentas y sesiones)]
     API --> C[Conversación y contexto confirmado]
     C --> I[Gateway de inferencia con cola]
     I --> L[llama.cpp CPU: Qwen3.5-2B]
@@ -75,7 +78,7 @@ La API es un monolito modular: se despliega como un proceso y separa responsabil
 
 | Módulo | Responsabilidad |
 | --- | --- |
-| `identity` | Resolver tokens y construir una identidad confiable del servidor. |
+| `identity` | Autenticar cuentas y sesiones del navegador, admitir Bearer para scripts y construir la identidad confiable. |
 | `policies` | Comprobar permisos y alcance de las operaciones. |
 | `conversation` | Coordinar consultas, contexto, historial, edición y cancelación. |
 | `operations` | Ejecutar herramientas permitidas y validar sus argumentos. |
@@ -96,6 +99,7 @@ flowchart LR
     F -->|HTTP /v1| M[llama.cpp: 8081]
     F -->|Lectura de vistas| P[PostgreSQL: 55432]
     F --> S[(Historial SQLite)]
+    F --> AU[(Usuarios y sesiones SQLite)]
     P --> PF[Base ficticia]
     P --> PI[Base institucional importada, opcional]
 ```
@@ -115,7 +119,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant H as Historial SQLite
     O->>UI: Escribe una pregunta
-    UI->>API: POST /api/chat/stream y Bearer
+    UI->>API: POST /api/chat/stream con cookie de sesión
     API->>API: Autenticar y comprobar sesión propia
     API-->>UI: request_started y status
     API->>API: Resolver contexto y reglas aplicables
@@ -172,6 +176,7 @@ Versiones declaradas por el proyecto; los archivos de bloqueo fijan las dependen
 | Validación SQL | SQLGlot `>=26,<31` | Comprobar estructura AST del catálogo permitido. |
 | Cliente de inferencia | HTTPX `>=0.28,<1` | Comunicación con el servidor local. |
 | Historial | SQLite, biblioteca estándar Python | Persistencia privada de chats. |
+| Autenticación | SQLite, scrypt y cookies HttpOnly | Cuentas administradas y sesiones revocables. |
 | Modelo | Qwen3.5-2B, GGUF `Q4_K_M` | Interpretación estructurada en español. |
 | Runtime del modelo | llama.cpp `b11696`, CPU x64 | Una generación concurrente, sin GPU. |
 | Pruebas | pytest, pytest-asyncio, unittest, Node Test Runner | Contratos, seguridad, lógica e integración. |
@@ -246,7 +251,14 @@ Abrir tres terminales en la raíz del repositorio:
 | 2 | `./scripts/start_backend.ps1 -Fixture` | API con datos ficticios en `127.0.0.1:8000`. |
 | 3 | `npm --prefix frontend run dev` | Interfaz en `127.0.0.1:5173`. |
 
-Abrir [el chat local](http://127.0.0.1:5173) e ingresar la clave de `.runtime/operator-token.txt`. El token se conserva solo en memoria del navegador; al recargar puede ser necesario volver a ingresar. La preferencia de tema sí se guarda en `localStorage`.
+Crear una cuenta para el entorno ficticio, desde la raíz:
+
+```powershell
+$accountName = Read-Host 'Nombre de usuario'
+backend/.venv/Scripts/python.exe scripts/manage_users.py --auth-path .runtime/auth-fixture.sqlite3 create $accountName --user-id operador-local
+```
+
+Abrir [el chat local](http://127.0.0.1:5173) e ingresar con usuario y contraseña. La sesión se conserva al recargar mediante una cookie HttpOnly. Cada cuenta recupera exclusivamente sus propios chats. El identificador `operador-local` conserva el historial del operador ficticio anterior; para nuevas personas, omitir `--user-id`. Ver [administración de usuarios](docs/users.md) para crear cuentas, permisos y restablecer contraseñas. El token de `.runtime/operator-token.txt` sigue disponible para los scripts de diagnóstico.
 
 Después de reiniciar Windows, si el cluster ya existe y está detenido, arrancarlo desde la raíz:
 
@@ -262,6 +274,26 @@ Detener frontend, API y modelo con `Ctrl+C` en sus terminales. Después, para de
 & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D "$PWD/.runtime/postgres-fixture" -m fast -w stop
 ```
 
+## Usuarios y sesiones
+
+Las cuentas se administran localmente, sin registro público ni credenciales predeterminadas. La herramienta solicita y confirma la contraseña sin mostrarla: admite entre 12 y 1024 caracteres. El usuario se normaliza a minúsculas y admite de 3 a 64 letras ASCII, números, puntos, guiones o guiones bajos; comienza con letra o número.
+
+Desde la raíz, para administrar el entorno ficticio:
+
+```powershell
+backend/.venv/Scripts/python.exe scripts/manage_users.py --auth-path .runtime/auth-fixture.sqlite3 create maria --display-name "María"
+backend/.venv/Scripts/python.exe scripts/manage_users.py --auth-path .runtime/auth-fixture.sqlite3 list
+backend/.venv/Scripts/python.exe scripts/manage_users.py --auth-path .runtime/auth-fixture.sqlite3 reset-password maria
+```
+
+Las nuevas cuentas reciben un `user_id` independiente. Los permisos predeterminados son `internal_data`, `tracking`, `offices` y `summary`, con alcance `global_internal`. Los permisos personales o de diagnóstico se asignan expresamente mediante `--permissions`. Para conservar conversaciones de una identidad anterior, usar `--user-id` con su identificador confirmado, sin reutilizar el de otra persona.
+
+La cookie `chatbot_session` es HttpOnly, SameSite=Strict y está limitada a `/api`. Dura 12 horas por defecto. SQLite conserva hashes de los tokens de sesión y contraseñas protegidas con scrypt y sal aleatoria. Cerrar sesión revoca la sesión actual; restablecer la contraseña revoca todas las sesiones de la cuenta. El límite de intentos por usuario y dirección se conserva tras reiniciar.
+
+La base predeterminada es `.runtime/auth.sqlite3`, o `.runtime/auth-fixture.sqlite3` en modo ficticio/demostración. Si se configura `CHATBOT_HISTORY_PATH`, la ruta de autenticación se deriva de ese archivo con sufijo `-auth.sqlite3`. `CHATBOT_AUTH_PATH` permite fijarla explícitamente: la herramienta de usuarios y la API deben apuntar al mismo archivo.
+
+Las operaciones que modifican estado con cookie verifican el origen. Para HTTPS, activar `CHATBOT_AUTH_COOKIE_SECURE` y declarar los orígenes públicos autorizados cuando el proxy lo requiera. Los Bearer configurados siguen disponibles para scripts. Ver [administración de usuarios](docs/users.md).
+
 ## Configuración
 
 Las variables empiezan por `CHATBOT_`. Los scripts de arranque cargan la configuración privada del entorno seleccionado; para ejecución directa, `Settings` también lee `.env` desde el directorio de trabajo. Ningún secreto pertenece al repositorio.
@@ -269,7 +301,7 @@ Las variables empiezan por `CHATBOT_`. Los scripts de arranque cargan la configu
 | Variable | Valor predeterminado | Propósito |
 | --- | --- | --- |
 | `CHATBOT_DATABASE_URL` | Vacío | DSN de la cuenta de lectura PostgreSQL. |
-| `CHATBOT_IDENTITIES_JSON` | `{}` | Mapa confiable de tokens a operadores, permisos y alcance. Sin mapa se deniega acceso a datos. |
+| `CHATBOT_IDENTITIES_JSON` | `{}` | Mapa confiable de tokens a operadores para scripts; el navegador usa cuentas administradas. |
 | `CHATBOT_DEMO_MODE` | `false` | Datos integrados ficticios e interpretación por reglas. |
 | `CHATBOT_FIXTURE_DATA` | `false` | Identifica PostgreSQL ficticio con modelo real. |
 | `CHATBOT_DATA_SNAPSHOT` | Vacío | Etiqueta de procedencia del respaldo. |
@@ -282,6 +314,12 @@ Las variables empiezan por `CHATBOT_`. Los scripts de arranque cargan la configu
 | `CHATBOT_SESSION_TTL` | `1800` segundos | Caducidad de caché de contexto en memoria. |
 | `CHATBOT_MAX_SESSIONS` | `100` | Máximo de chats por operador, sin borrado automático. |
 | `CHATBOT_HISTORY_PATH` | Vacío | Permite sustituir la ubicación privada de SQLite. |
+| `CHATBOT_AUTH_PATH` | Vacío | Ruta privada de usuarios y sesiones; ver [usuarios](docs/users.md). |
+| `CHATBOT_AUTH_SESSION_TTL` | `43200` segundos | Vigencia de la sesión del navegador. |
+| `CHATBOT_AUTH_COOKIE_SECURE` | `false` | Activar para un despliegue HTTPS. |
+| `CHATBOT_AUTH_ALLOWED_ORIGINS` | `[]` | Orígenes públicos adicionales permitidos detrás de un proxy. |
+| `CHATBOT_AUTH_LOGIN_MAX_ATTEMPTS` | `10` | Máximo de intentos por usuario o dirección en la ventana. |
+| `CHATBOT_AUTH_LOGIN_WINDOW` | `300` segundos | Ventana del límite de intentos de inicio de sesión. |
 | `CHATBOT_STATEMENT_TIMEOUT_MS` | `3000` | Timeout SQL. |
 | `CHATBOT_MAX_ROWS` | `100` | Límite general de filas por resultado. |
 | `CHATBOT_MAX_RESULT_BYTES` | `65536` | Límite general del tamaño de resultados. |
@@ -290,12 +328,15 @@ El arranque institucional usa `.runtime/chat-history.sqlite3`; `-Fixture` usa `.
 
 ## API y contratos
 
-Las rutas de datos requieren `Authorization: Bearer <token>`. El frontend usa el proxy del mismo origen. La interfaz Swagger y ReDoc está desactivada en la configuración actual.
+Las rutas de datos requieren una sesión de usuario válida o `Authorization: Bearer <token>` para scripts. El frontend usa el proxy del mismo origen y una cookie HttpOnly. Los endpoints `/api/auth/login`, `/api/auth/me` y `/api/auth/logout` administran la sesión. La interfaz Swagger y ReDoc está desactivada en la configuración actual.
 
 | Método | Ruta | Función |
 | --- | --- | --- |
 | GET | `/health` | Vida del proceso, sin verificar dependencias. |
 | GET | `/api/config` | Modo público de datos e inferencia, sin secretos. |
+| POST | `/api/auth/login` | Recibe usuario y contraseña; crea la sesión del navegador. |
+| GET | `/api/auth/me` | Recupera la cuenta de la sesión actual. |
+| POST | `/api/auth/logout` | Revoca la sesión y elimina su cookie. |
 | GET | `/api/health` | Diagnóstico de configuración; requiere `diagnostics`. |
 | GET | `/api/metrics` | Contadores en memoria; requiere `diagnostics`. |
 | POST | `/api/chat` | Consulta con respuesta JSON. |
@@ -413,7 +454,7 @@ npm audit --audit-level=high
 Set-Location ..
 ```
 
-La comprobación previa a esta ampliación documental, realizada el **19 de octubre de 2026**, completó **135 pruebas backend, 10 de scripts y 6 de frontend**, además de la compilación. Es evidencia local de ese estado del código; no acredita aceptación de negocio ni ejecución satisfactoria del workflow remoto.
+La comprobación de esta actualización, realizada el **20 de octubre de 2026**, completó **142 pruebas backend, 10 de scripts y 6 de frontend**, además de la compilación. Es evidencia local de ese estado del código; no acredita aceptación de negocio ni ejecución satisfactoria del workflow remoto.
 
 La suite cubre contratos JSON/SSE, arquitectura, permisos, filtros, contexto, edición, borrado, persistencia, catálogo SQL y cancelación. Algunas integraciones PostgreSQL se omiten explícitamente cuando falta el fixture; revisar el resumen de ejecución antes de concluir que fueron comprobadas.
 
@@ -448,12 +489,12 @@ flowchart LR
 2. Construir el frontend con `npm ci` y `npm run build`.
 3. Adaptar hostname, certificados, rutas y entornos de las plantillas. Validar Nginx con `nginx -t`.
 4. Mantener API/modelo en loopback y proteger PostgreSQL; para un servidor de datos remoto, usar red privada y TLS validado.
-5. Configurar identidades autorizadas, permisos de archivos y persistencia. La unidad API propone `/var/lib/correos-chat/chat-history.sqlite3` y un solo worker.
+5. Configurar cuentas autorizadas, permisos de archivos y persistencia. La unidad API propone `/var/lib/correos-chat/chat-history.sqlite3` y un solo worker; la herramienta de usuarios debe apuntar a la misma base de autenticación que la API. Activar `CHATBOT_AUTH_COOKIE_SECURE=true` y declarar el origen HTTPS público en `CHATBOT_AUTH_ALLOWED_ORIGINS` cuando el proxy lo requiera.
 6. Verificar consultas autorizadas, denegaciones, cancelación, reinicio y recuperación antes de habilitar el piloto.
 
 `/health` solo acredita vida del proceso. `/api/health` informa configuración y declara `dependencies_verified: false`; no sustituye una consulta controlada de readiness.
 
-Para respaldar el historial, detener la API y copiar el SQLite privado. Conservar configuración y manifiestos con sus controles de acceso. Para revertir, restaurar la revisión y lockfiles anteriores, reconstruir frontend y revisar compatibilidad de vistas con administración de datos. No sobrescribir ni borrar bases postales existentes. Más detalle en [operación y recuperación](docs/operations.md).
+Para respaldar el historial y las cuentas, detener la API y copiar ambos SQLite privados, conservando sus permisos de acceso. Conservar configuración y manifiestos con sus controles de acceso. Para revertir, restaurar la revisión y lockfiles anteriores, reconstruir frontend y revisar compatibilidad de vistas con administración de datos. No sobrescribir ni borrar bases postales existentes. Más detalle en [operación y recuperación](docs/operations.md).
 
 ## Solución de problemas
 
@@ -464,7 +505,7 @@ Para respaldar el historial, detener la API y copiar el SQLite privado. Conserva
 | PostgreSQL no arranca | Revisar puerto `55432`, ruta de binarios y `.runtime/postgres-fixture.log`; no reinicializar un cluster existente. |
 | «Fixture already exists» | Omitir la inicialización; arrancar el cluster existente si está detenido. |
 | API no conecta o el navegador muestra error de proxy | Comprobar PostgreSQL, API en `8000`, modelo en `8081` y la terminal de cada servicio. |
-| Respuestas 401 o 403 | Volver a ingresar con la clave del entorno y revisar permisos del operador; una URL de chat no concede acceso. |
+| Respuestas 401 o 403 | Volver a iniciar sesión y revisar permisos de la cuenta y el origen permitido; una URL de chat no concede acceso. |
 | Se muestran datos ficticios en vez del respaldo | Revisar `/api/config` y el arranque elegido; `-Fixture` selecciona explícitamente datos ficticios. |
 | Faltan fichas personales o fuentes contables | Revisar permisos y proyecciones adicionales instaladas; el fixture básico no reproduce todas las ampliaciones institucionales. |
 | Cola llena, timeout o respuesta lenta | Revisar servicio del modelo, recursos y carga; mantener el despliegue de un worker documentado y medir antes de cambiar límites. |
@@ -482,6 +523,7 @@ Antes de ampliar el piloto quedan la revisión del diccionario y permisos con ne
 | --- | --- |
 | [Arquitectura](docs/architecture.md) | Fronteras, consultas, inferencia y persistencia. |
 | [Backend](backend/README.md) | Configuración y contratos técnicos. |
+| [Usuarios y acceso](docs/users.md) | Cuentas, permisos, sesiones y restablecimiento de contraseñas. |
 | [Datos institucionales](docs/institutional-data.md) | Respaldo, conteos y comprobaciones de importación. |
 | [Esquema y límites](docs/schema-notes.md) | Semántica disponible y restricciones de datos. |
 | [Fichas completas](docs/full-details.md) | Proyección privada y permisos personales. |

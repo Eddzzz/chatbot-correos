@@ -2,7 +2,9 @@
 
 Cada conversación recibe un UUID del servidor y una dirección como `/c/3e40cb2d-7f08-4904-8ab6-bb43cc1d4bf1`. El código aparece bajo el título del centro de consultas. La primera pregunta da nombre al chat en el historial. Los enlaces del historial permiten abrirlo en otra pestaña y funcionan con Atrás/Adelante.
 
-Se guardan preguntas, respuestas, filas devueltas, fuentes, fechas y filtros confirmados. Al recargar o volver a abrir la aplicación, ingresar con la clave del mismo operador y abrir el chat desde su URL o desde el historial. El token sigue únicamente en memoria del navegador; no se guarda en la URL, localStorage ni sessionStorage. Conocer el UUID no concede acceso.
+Se guardan preguntas, respuestas, filas devueltas, fuentes, fechas y filtros confirmados. Cada cuenta ingresa con usuario y contraseña y recupera únicamente sus conversaciones. La sesión se restaura al recargar mientras siga vigente; al cerrar sesión, el navegador pierde el acceso y se limpia la conversación visible. La credencial de sesión viaja en una cookie HttpOnly y no se guarda en la URL, localStorage ni sessionStorage. Conocer el UUID no concede acceso.
+
+La propiedad depende del `user_id` estable asignado en el servidor. Para conservar los chats de un operador que antes usaba un token, crear su cuenta con ese mismo `user_id`; por ejemplo, `operador-local` en el entorno ficticio. Crear otra cuenta con un identificador distinto produce un historial independiente. No se reasignan ni copian chats al iniciar sesión. Ver [administración de usuarios](users.md).
 
 SQLite conserva los chats en `.runtime/chat-history.sqlite3`. El arranque con `-Fixture` usa `.runtime/chat-history-fixture.sqlite3`. `CHATBOT_HISTORY_PATH` permite indicar otra ruta. El archivo es privado del servidor y no se publica ni se versiona. La aplicación usa consultas parametrizadas y verifica propietario, alcance y permisos vigentes antes de devolver mensajes. Una conversación con fichas personales requiere conservar `personal_data`; una que contiene seguimiento requiere `tracking` e `internal_data`. El listado oculta los chats cuyo contenido ya no está autorizado.
 

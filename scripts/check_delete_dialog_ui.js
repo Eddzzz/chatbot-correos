@@ -14,11 +14,16 @@ async page => {
     }
     return r.fulfill({json:{messages:[{role:'user',content:'Pregunta de prueba'}]}});
   });
+  await page.route('**/api/auth/**', route => {
+    const path=new URL(route.request().url()).pathname;
+    return route.fulfill({status:path==='/api/auth/me'?401:200,json:path==='/api/auth/me'?{error:{message:'Sin sesión'}}:path==='/api/auth/logout'?{logged_out:true}:{user:{user_id:'ui-test-user',username:'ui-test-account',display_name:'Cuenta de prueba'}}});
+  });
   await page.goto(`http://127.0.0.1:5173/c/${id}`);
   // Any use of the browser confirmation is a regression.
   await page.evaluate(()=>window.confirm=()=>{throw Error('Browser confirmation used')});
-  await page.getByLabel('Clave de acceso',{exact:true}).fill('ui-check');
-  await page.getByRole('button',{name:'Iniciar conversación'}).click();
+  await page.getByLabel('Usuario',{exact:true}).fill('ui-check');
+  await page.getByLabel('Contraseña',{exact:true}).fill(await page.evaluate(()=>crypto.randomUUID()));
+  await page.getByRole('button',{name:'Iniciar sesión'}).click();
   const trigger=page.getByRole('button',{name:'Eliminar chat: Mi conversación postal',exact:true});
   await trigger.click();
   const dialog=page.getByRole('dialog',{name:'¿Eliminar este chat?'});

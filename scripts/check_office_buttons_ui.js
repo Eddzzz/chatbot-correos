@@ -20,9 +20,14 @@ async (page) => {
       : path === '/api/offices/1/relations' ? {rows:['users','auditoria','eventos_auditoria',...Array.from({length:25},(_,i)=>`category_${i}`)].map(table_name=>({table_name,total_count:11})),truncated:false} : {};
     return route.fulfill({json:body});
   });
+  await page.route('**/api/auth/**', route => {
+    const path=new URL(route.request().url()).pathname;
+    return route.fulfill({status:path==='/api/auth/me'?401:200,json:path==='/api/auth/me'?{error:{message:'Sin sesión'}}:path==='/api/auth/logout'?{logged_out:true}:{user:{user_id:'ui-test-user',username:'ui-test-account',display_name:'Cuenta de prueba'}}});
+  });
   await page.goto(`http://127.0.0.1:5173/c/${id}`);
-  await page.getByLabel('Clave de acceso',{exact:true}).fill('test-only');
-  await page.getByRole('button',{name:'Iniciar conversación'}).click();
+  await page.getByLabel('Usuario',{exact:true}).fill('test-only');
+  await page.getByLabel('Contraseña',{exact:true}).fill(await page.evaluate(()=>crypto.randomUUID()));
+  await page.getByRole('button',{name:'Iniciar sesión'}).click();
   const button = page.getByRole('button',{name:/^(Ver|Ocultar) personal y usuarios relacionados$/});
   const category = page.locator('.relation-story').filter({has:button});
   await button.click();

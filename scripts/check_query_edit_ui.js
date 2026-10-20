@@ -3,7 +3,7 @@ async page => {
   const id='11111111-1111-1111-1111-111111111111';
   let sent;
   await page.setViewportSize({width:1100,height:850});
-  await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:'http://127.0.0.1:5174'});
+  await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:'http://127.0.0.1:5173'});
   const history=[{role:'user',content:'Carga de agosto de 2026'},{role:'assistant',content:'Resumen de agosto',status:'answer'},{role:'user',content:'septiembre de 2026'},{role:'assistant',content:'Resumen de septiembre',status:'answer'}];
   await page.route('**/api/config',r=>r.fulfill({json:{data_mode:'demo'}}));
   await page.route('**/api/sessions',r=>r.fulfill({json:{sessions:[{session_id:id,title:'Carga postal'}]}}));
@@ -13,9 +13,14 @@ async page => {
     const completed={request_id:'edit-test',session_id:id,status:'answer',answer:'Carga de agosto por departamentos'};
     await r.fulfill({contentType:'text/event-stream',body:`event: request_started\ndata: ${JSON.stringify({request_id:'edit-test',session_id:id})}\n\nevent: completed\ndata: ${JSON.stringify(completed)}\n\n`});
   });
-  await page.goto(`http://127.0.0.1:5174/c/${id}`);
-  await page.getByLabel('Clave de acceso',{exact:true}).fill('ui-test');
-  await page.getByRole('button',{name:'Iniciar conversación'}).click();
+  await page.route('**/api/auth/**', route => {
+    const path=new URL(route.request().url()).pathname;
+    return route.fulfill({status:path==='/api/auth/me'?401:200,json:path==='/api/auth/me'?{error:{message:'Sin sesión'}}:path==='/api/auth/logout'?{logged_out:true}:{user:{user_id:'ui-test-user',username:'ui-test-account',display_name:'Cuenta de prueba'}}});
+  });
+  await page.goto(`http://127.0.0.1:5173/c/${id}`);
+  await page.getByLabel('Usuario',{exact:true}).fill('ui-test');
+  await page.getByLabel('Contraseña',{exact:true}).fill(await page.evaluate(()=>crypto.randomUUID()));
+  await page.getByRole('button',{name:'Iniciar sesión'}).click();
   const edit=page.getByRole('button',{name:'Editar consulta',exact:true});
   const bubble=page.locator('.message.user').last();
   await page.mouse.move(0,0);

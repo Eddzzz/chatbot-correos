@@ -17,9 +17,14 @@ async (page) => {
   });
   const errors=[];
   page.on('pageerror', error=>errors.push(error.message));
+  await page.route('**/api/auth/**', route => {
+    const path=new URL(route.request().url()).pathname;
+    return route.fulfill({status:path==='/api/auth/me'?401:200,json:path==='/api/auth/me'?{error:{message:'Sin sesión'}}:path==='/api/auth/logout'?{logged_out:true}:{user:{user_id:'ui-test-user',username:'ui-test-account',display_name:'Cuenta de prueba'}}});
+  });
   await page.goto(`http://127.0.0.1:5173/c/${id}`);
-  await page.getByLabel('Clave de acceso',{exact:true}).fill('synthetic-layout-test');
-  await page.getByRole('button',{name:'Iniciar conversación'}).click();
+  await page.getByLabel('Usuario',{exact:true}).fill('synthetic-layout-test');
+  await page.getByLabel('Contraseña',{exact:true}).fill(await page.evaluate(()=>crypto.randomUUID()));
+  await page.getByRole('button',{name:'Iniciar sesión'}).click();
   await page.locator('.full-details').waitFor();
   check(await page.locator('.full-details details').count()===0,'Fiche still uses nested disclosures');
   const text=await page.locator('.full-details').innerText();

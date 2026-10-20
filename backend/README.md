@@ -24,11 +24,13 @@ CHATBOT_MODEL_VERSION=SHA256_DEL_MODELO_VERIFICADO
 CHATBOT_IDENTITIES_JSON={"TOKEN_ALEATORIO_LARGO":{"user_id":"operador1","permissions":["internal_data","tracking","offices","summary"],"scope":["global_internal"]}}
 ```
 
-Genera tokens con `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Tokens de ejemplo no son credenciales. Sin mapa configurado todas las rutas de datos rechazan acceso. Identidad y permisos proceden exclusivamente del mapa del servidor, nunca del cuerpo de chat. Agregar `diagnostics` permite `/api/health` y `/api/metrics`; `/health` solo verifica vida del proceso, no conectividad.
+El navegador usa cuentas de usuario y contraseña administradas con `scripts/manage_users.py`; ver [usuarios](../docs/users.md). Las sesiones usan cookies HttpOnly y los chats se vinculan al identificador estable de cada cuenta. Identidad y permisos proceden del servidor, nunca del cuerpo de chat.
+
+Para scripts sigue disponible el mapa Bearer. Genera tokens con `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Tokens de ejemplo no son credenciales. Sin cuenta válida ni token configurado, las rutas de datos rechazan acceso. Agregar `diagnostics` permite `/api/health` y `/api/metrics`; `/health` solo verifica vida del proceso, no conectividad.
 
 `CHATBOT_DEMO_MODE=true` habilita únicamente fixtures identificados como ficticios e interpretación por reglas; código disponible `DEMO123BO`. `CHATBOT_FIXTURE_DATA=true` identifica una base PostgreSQL de prueba con datos ficticios y permite usar el modelo real sin confundirla con el respaldo. Ambos están desactivados de forma predeterminada. Configurar DSN no restaura ni altera bases existentes. Aplicar la proyección SQL y un rol restringido mediante los scripts del directorio raíz, tras revisar sus instrucciones. No usar administrador, dueño de objetos ni cuenta con SELECT sobre tablas de `public`. Las vistas deben exigir `chatbot.access_scope=global_internal`; acceso interno global explícito, sin aislamiento ficticio por cliente/oficina.
 
-Rutas autenticadas con `Authorization: Bearer ...`:
+Rutas autenticadas con la cookie de sesión o `Authorization: Bearer ...`:
 
 * `POST /api/chat` y `POST /api/chat/stream`: `{ "message":"...", "session_id": null }`.
 * SSE: `request_started`, `status`, `answer_chunk`, `completed`, `error`; todos con `request_id`. Primer evento incluye `session_id`; completed incluye respuesta y evidencia. Texto se fragmenta después de comprobar los resultados, nunca durante generación no verificada.

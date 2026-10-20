@@ -1,5 +1,7 @@
 # Local services, credentials and imported institutional data
 .runtime/
+login-inicial.json
+login-check.json
 .env
 .env.*
 !.env.example
